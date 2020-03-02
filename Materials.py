@@ -1,10 +1,6 @@
 import numpy as np
 from scipy import interp
 
-Air = 1 
-
-Water = 1.33
-
 def Gold(wavelength):
 
 	energy = np.array([0.64, 0.77, 0.89, 1.02, 1.14, 1.26, 1.39, 1.51, 
