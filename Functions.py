@@ -47,16 +47,29 @@ class Electric_Field(object):
 	def __init__(self,mesh,wavelength,refine=True):
 		self.mesh = mesh
 		self.wavelength = wavelength
-		self.Refine = refine 
+		self.refine = refine 
 	
+
 	fes = HCurl(mesh,order=2,complex=True)
 	E,W = fes.TnT()
 
-	p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
-	mesh.SetPML(p,'pml')
+	brick=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
+	self.mesh.SetPML(brick,'pml')
 
 	k = 2*pi / wavelength 
-	Einc = CoefficientFunction((0,0,exp(-1J*k*x)))
+
+	Einc = CoefficientFunction((0,0,exp(-1J*k*n*x)))
+	Esc = GridFunction(fes)
+
+	if refine:
+		self.RefineMesh()
+		Esc = Calculate()
+		E = Esc + Einc 
+	else:
+		Esc = Calculate()
+		E = Esc + Einc
+
+	eps_r = self.RelativePermittivity(wavelength)
 
 	def RelativePermittivity(self,wavelength):
 
@@ -68,8 +81,6 @@ class Electric_Field(object):
 
 		print("Test wavelength: ",wavelength)
 		p = mesh.Materials('gold') + mesh.Materials('water')
-		Esc = GetEsc(wavelength)
-		Esc_approx = GridFunction(fes)
 		Esc_approx.Set(Esc)
 		err_func = Norm(Esc-Esc_approx)
 		elerr_phy = Integrate(err_func,mesh,element_wise=True,definedon=p)
@@ -82,16 +93,14 @@ class Electric_Field(object):
 		res = minimize_scalar(Error,bounds=(400,700),method='Bounded',tol=3)
 		wavelength = res.x
 		print("Max error wavelength: ",wavelength)
+		Esc_approx = GridFunction(fes)
 
 		with TaskManager():
 			while True: 	
-				p = mesh.Materials('gold') + mesh.Materials('water')
 				print("DoF: ",fes.ndof)
 				maxerr = -Error(wavelength)
 				print("Max Error: ",maxerr)
-				p = mesh.Materials('gold') + mesh.Materials('water')
-				Esc = GetEsc(wavelength)
-				Esc_approx = GridFunction(fes)
+				Esc = self.Calculate()
 				Esc_approx.Set(Esc)
 				err_func = Norm(Esc-Esc_approx)
 				elerr = Integrate(err_func,mesh,element_wise=True)
@@ -104,16 +113,12 @@ class Electric_Field(object):
 
 	def Calculate(self):
 
-		Esc = GridFunction(fes)
-		
-		eps_r = RelativePermittivity(wavelength)
-
 		a = BilinearForm(fes,symmetric=True)
 		a += (curl(E)*curl(W)-k*k*eps_r*E*W)*dx
 		a += -1J*k*E.Trace()*W.Trace()*ds('outer')
 
 		f = LinearForm(fes)
-		f += (eps_r-n**2)*k**2*Einc*W*dx(mesh.Materials('gold'))
+		f += (eps_r-n**2)*k**2*Einc*W*dx('gold')
 
 		c = Preconditioner(a,'bddc')
 
@@ -145,7 +150,6 @@ class Electric_Field(object):
 			
 
 def ExtinctionSpectrum(InitWave,FinWave,Steps,name="Extinction.png"):
-
 
 	waverange = np.linspace(InitWave,FinWave,Steps)
 
