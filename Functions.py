@@ -118,7 +118,7 @@ class Electric_Field(object):
 		a += -1J*k*E.Trace()*W.Trace()*ds('outer')
 
 		f = LinearForm(fes)
-		f += (eps_r-n**2)*k**2*Einc*W*dx(mesh.Materials('gold'))
+		f += (eps_r-n**2)*k**2*Einc*W*dx('gold')
 
 		c = Preconditioner(a,'bddc')
 
