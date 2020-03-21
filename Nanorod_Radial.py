@@ -1,11 +1,12 @@
-from ngsolve import *
-from netgen.csg import *
-import numpy as np
-from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt
-from scipy.optimize import minimize_scalar
-import pandas as pd
 from math import pi
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from netgen.csg import *
+from ngsolve import *
+from scipy.interpolate import interp1d
+from scipy.optimize import minimize_scalar
 
 n = 1.33
 
@@ -28,30 +29,25 @@ def Nanorod(aeff,ratio,mt_length):
 		sphere1 = Sphere(Pnt(0,-cyl_length,0),radius)
 		sphere2 = Sphere(Pnt(0,cyl_length,0),radius)
 
-		cyl1 = Cylinder(Pnt(0,-cyl_length,0),Pnt(0,cyl_length,0),radius)
-		cyl2 = Cylinder(Pnt(0,-physical_space,0),Pnt(0,physical_space,0),radius+100)
-		cyl3 = Cylinder(Pnt(0,-domain,0),Pnt(0,domain,0),radius+200).bc('outer')
+		cyl1 = Cylinder(Pnt(0,-2*cyl_length,0),Pnt(0,2*cyl_length,0),radius)
+		cyl2 = Cylinder(Pnt(0,-2*physical_space,0),Pnt(0,2*physical_space,0),radius+100)
+		cyl3 = Cylinder(Pnt(0,-2*domain,0),Pnt(0,2*domain,0),radius+200).bc('outer')
 
-		box1 = OrthoBrick(Pnt(-radius,-cyl_length,-radius),Pnt(radius,cyl_length,radius)) 
 		box2 = OrthoBrick(Pnt(-physical_space,-physical_space,-physical_space),Pnt(physical_space,physical_space,physical_space)) 
 		box3 = OrthoBrick(Pnt(-domain,-domain,-domain),Pnt(domain,domain,domain)).bc('outer')
 
 		plane1 = Plane(Pnt(0,-cyl_length,0),Vec(0,-1,0))
 		plane2 = Plane(Pnt(0,cyl_length,0),Vec(0,1,0))
 
-		middle = (cyl1*box1).mat('gold')
-		endcap1 = (sphere1-plane1).mat('gold')
-		endcap2 = (sphere2-plane2).mat('gold')
+		middle = cyl1*plane1*plane2
 
-		pmldom = (cyl3*box3).mat('pml').maxh(80)
-		hole1 = (pmldom - cyl2*box2)
-		water = (pmldom*hole1 - middle - endcap1 - endcap2).mat('water')
+		AuNP = (middle+sphere1+sphere2).mat('gold')
+		water = (cyl2*box2 - AuNP).mat('water')
+		pmldom = (cyl3*box3 - cyl2*box2).mat('pml')
 
-		geo.Add(pmldom)
+		geo.Add(AuNP)
 		geo.Add(water)
-		geo.Add(middle)
-		geo.Add(endcap1)
-		geo.Add(endcap2)
+		geo.Add(pmldom)
 
 	else:
 
@@ -81,28 +77,26 @@ def Nanorod(aeff,ratio,mt_length):
 		plane1 = Plane(Pnt(0,-cyl_length,0),Vec(0,-1,0))
 		plane2 = Plane(Pnt(0,cyl_length,0),Vec(0,1,0))
 		
+		middle = cyl1*plane1*plane2
+		endcap1 = sphere1-plane1
+		endcap2 = sphere2-plane2
 
-		middle_mt = ((cyl2-cyl1)*box2).mat('mt_mid')
-		endcap1_mt = (sphere3-sphere1-plane1).mat('mt_end')
-		endcap2_mt = (sphere4-sphere2-plane2).mat('mt_end')
+		AuNP = (middle+sphere1+sphere2).mat('gold')
 
-		pmldom = (cyl4*box4).mat('pml').maxh(80)
-		hole1 = (pmldom - cyl3*box3)
-		water = (pmldom*hole1 - middle_mt - endcap1_mt - endcap2_mt).mat('water')
+		middle_mt = ((cyl2-cyl1)*plane1*plane2).mat('mt_mid')
+		endcap1_mt = (sphere3-plane1)-sphere1
+		endcap2_mt = (sphere4-plane2)-sphere2
+		endcaps_mt = (endcap1_mt + endcap2_mt).mat('mt_end')
+		total_body = AuNP + middle_mt + endcaps_mt
 
-		middle_rod = (cyl1*box1).mat('gold')
-		endcap1 = (sphere1-plane1).mat('gold')
-		endcap2 = (sphere2-plane2).mat('gold')
+		water = (cyl3*box3 - total_body).mat('water')
+		pmldom = (cyl4*box4 - cyl3*box3).mat('pml')
 
-		geo.Add(pmldom)
-		geo.Add(water)
+		geo.Add(AuNP)
 		geo.Add(middle_mt)
-		geo.Add(endcap1_mt)
-		geo.Add(endcap2_mt)
-		geo.Add(middle_rod)
-		geo.Add(endcap1)
-		geo.Add(endcap2)
-
+		geo.Add(endcaps_mt)
+		geo.Add(water)
+		geo.Add(pmldom)
 
 	ngmesh = geo.GenerateMesh()
 
@@ -206,7 +200,7 @@ def RefineMesh():
 
 	with TaskManager():
 		for x in range(2): 	
-			print(fes.ndof)
+			print("DoF:", fes.ndof)
 			Esc = GetEsc(wavelength)
 			Esc_approx = GridFunction(fes)
 			Esc_approx.Set(Esc)
@@ -218,7 +212,7 @@ def RefineMesh():
 			mesh.Refine()
 			fes.Update()
 			# print(fes.ndof)
-			print("maxerr",maxerr)
+			print("maxerr:",maxerr)
 			# if maxerr < 1000:
 				# return wavelength
 
@@ -297,11 +291,11 @@ def Saturation(aeff,ratio):
 	return ext_list
 
 
-aeff_list = np.linspace(10,100,5)
-ar_list = np.linspace(1.1,5,5)
+# aeff_list = np.linspace(10,100,5)
+# ar_list = np.linspace(1.1,5,5)
 
 aeff = 40
-ratio = 1.1
+ratio = 2
 mt_length = 0
 mesh = Nanorod(aeff,ratio,0)
 radius = aeff*(2/(3*ratio-1))**(1/3)
