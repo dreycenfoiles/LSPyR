@@ -1,23 +1,9 @@
-from itertools import cycle
 from math import pi
 
-import matplotlib.pyplot as plt
-import numpy as np
-import scipy.sparse as sp
-from scipy.optimize import minimize_scalar
-from scipy.constants import epsilon_0
-
-from netgen.csg import *
+from scipy.optimize import minimize
 from ngsolve import *
 
 ngsglobals.msg_level = 0
-
-particle = 40
-physical_space = 300
-domain = 450
-
-n = 1.33
-
 
 
 def IncidentWave(wavelength):
@@ -26,9 +12,7 @@ def IncidentWave(wavelength):
 
 
 def RelativePermittivity(wavelength):
-
 	permittivities = {'water' : 1.33**2, 'gold' : Au_Permittivity(wavelength), 'pml' : 1.33**2}
-
 	return CoefficientFunction([permittivities[mat] for mat in mesh.GetMaterials()])
 
 
@@ -59,40 +43,36 @@ def GetEsc(wavelength):
 
 def Error(wavelength):
 	print("Test wavelength: ",wavelength)
-	p = mesh.Materials('gold') + mesh.Materials('water')
+	
 	Esc = GetEsc(wavelength)
 	Esc_approx = GridFunction(fes)
 	Esc_approx.Set(Esc)
 	err_func = Norm(Esc-Esc_approx)
 	elerr_phy = Integrate(err_func,mesh,element_wise=True,definedon=p)
-	maxerr = max(elerr_phy)
 
 	return -maxerr
 
 def RefineMesh():
 
-	res = minimize_scalar(Error,bounds=(400,800),method='Bounded',tol=3)
+	res = minimize(Error,bounds=(400,800),tol=3)
 	wavelength = res.x
 	print("Max error wavelength: ",wavelength)
 	fesLO = HCurl(mesh,order=1,complex=True)
 
-	with TaskManager():
-		while True: 	
-			p = mesh.Materials('gold') + mesh.Materials('water')
-			print("DoF: ",fes.ndof)
-			maxerr = -Error(wavelength)
-			print("Max Error: ",maxerr)
-			p = mesh.Materials('gold') + mesh.Materials('water')
-			Esc = GetEsc(wavelength)
-			Esc_approx = GridFunction(fesLO)
-			Esc_approx.Set(Esc)
-			err_func = Norm(Esc-Esc_approx)
-			elerr = Integrate(err_func,mesh,element_wise=True)
-			for el in mesh.Elements():
-				mesh.SetRefinementFlag(el, elerr[el.nr] > .5*maxerr and (el.mat != 'pml'))
-			mesh.Refine()
-			fes.Update()
-			fesLO.Update()
+    for x in range(2):
+        print("DoF: ",fes.ndof)
+        maxerr = -Error(wavelength)
+        print("Max Error: ",maxerr)
+        Esc = GetEsc(wavelength)
+        Esc_approx = GridFunction(fesLO)
+        Esc_approx.Set(Esc)
+        err_func = Norm(Esc-Esc_approx)
+        elerr = Integrate(err_func,mesh,element_wise=True)
+        for el in mesh.Elements():
+            mesh.SetRefinementFlag(el, elerr[el.nr] > .5*maxerr and (el.mat != 'pml'))
+        mesh.Refine()
+        fes.Update()
+        fesLO.Update()
 
 
 def Extinction(wavelength):
@@ -105,35 +85,11 @@ def Extinction(wavelength):
 	Esc = GetEsc(wavelength)
 	E = Einc + Esc
 
-	ext = 1e-18*k*Integrate((eps_r-1)*E*Conj(Einc),mesh,definedon=mesh.Materials('gold'),order=10).imag
+	ext = 1e-18*k*Integrate((eps_r-1)*E*Conj(Einc),mesh,definedon=mesh.Materials('gold')).imag
 	print("Extinction: ",ext)
 	return ext
 
 
-def DrawField(E):
-
-	vtk = VTKOutput(ma=mesh,
-				coefs=[Norm(E)],
-				names = ["E"],
-				filename="Efield",
-				subdivision=2)
-	vtk.Do()
-
-def ExtinctionSpectrum(InitWave,FinWave,Steps):
-
-	from compare2 import data
-
-	print(fes.ndof)
-
-	waverange = np.linspace(InitWave,FinWave,Steps)
-
-	extinction = np.array([Extinction(wavelength) for wavelength in waverange])
-
-	plt.figure()
-	plt.plot([el[0]*1e+9 for el in data],[el[1] for el in data],label="Mie")
-	plt.plot(waverange,extinction,label="FEM")
-	plt.legend()
-	plt.savefig('extinction_comp_40nm.png')
 
 
 

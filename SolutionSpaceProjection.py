@@ -1,3 +1,5 @@
+import scipy.sparse as sp
+from scipy.linalg import inv, orth
 
 def SolutionSpaceGeneration(fmin,fmax,wave_list=[]):
 	

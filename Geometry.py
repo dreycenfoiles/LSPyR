@@ -1,5 +1,11 @@
+from netgen.csg import *
+from ngsolve import Mesh
+from Materials import *
 
-def NewMesh():
+def Nanosphere(particle):
+
+	physical_space = particle + 150
+	domain = physical_space + 100
 
 	geo = CSGeometry()
 
@@ -91,7 +97,6 @@ def Nanorod(aeff,ratio,mt_length):
 		plane1 = Plane(Pnt(0,-cyl_length,0),Vec(0,-1,0))
 		plane2 = Plane(Pnt(0,cyl_length,0),Vec(0,1,0))
 		
-
 		middle_mt = ((cyl2-cyl1)*box2).mat('mt_mid')
 		endcap1_mt = (sphere3-sphere1-plane1).mat('mt_end')
 		endcap2_mt = (sphere4-sphere2-plane2).mat('mt_end')
@@ -100,7 +105,7 @@ def Nanorod(aeff,ratio,mt_length):
 		hole1 = (pmldom - cyl3*box3)
 		water = (pmldom*hole1 - middle_mt - endcap1_mt - endcap2_mt).mat('water')
 
-		middle_rod = (cyl1*box1).mat('gold')
+		middle_rod = (cyl1*plane1*plane2).mat('gold')
 		endcap1 = (sphere1-plane1).mat('gold')
 		endcap2 = (sphere2-plane2).mat('gold')
 
