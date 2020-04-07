@@ -50,7 +50,7 @@ class Electric_Field(object):
 		self.refine = refine 
 	
 
-	fes = HCurl(mesh,order=2,complex=True)
+	fes = HCurl(self.mesh,order=2,complex=True)
 	E,W = fes.TnT()
 
 	brick=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)

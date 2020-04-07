@@ -43,7 +43,7 @@ def Nanorod(aeff,ratio,mt_length):
 
 		AuNP = (middle+sphere1+sphere2).mat('gold')
 		water = (cyl2*box2 - AuNP).mat('water')
-		pmldom = (cyl3*box3 - cyl2*box2).mat('pml')
+		pmldom = (cyl3*box3 - cyl2*box2).mat('pml').maxh(80)
 
 		geo.Add(AuNP)
 		geo.Add(water)
@@ -78,8 +78,6 @@ def Nanorod(aeff,ratio,mt_length):
 		plane2 = Plane(Pnt(0,cyl_length,0),Vec(0,1,0))
 		
 		middle = cyl1*plane1*plane2
-		endcap1 = sphere1-plane1
-		endcap2 = sphere2-plane2
 
 		AuNP = (middle+sphere1+sphere2).mat('gold')
 
@@ -90,7 +88,7 @@ def Nanorod(aeff,ratio,mt_length):
 		total_body = AuNP + middle_mt + endcaps_mt
 
 		water = (cyl3*box3 - total_body).mat('water')
-		pmldom = (cyl4*box4 - cyl3*box3).mat('pml')
+		pmldom = (cyl4*box4 - cyl3*box3).mat('pml').maxh(80)
 
 		geo.Add(AuNP)
 		geo.Add(middle_mt)
@@ -144,8 +142,8 @@ def RelativePermittivity(wavelength,delta_n=0.2):
 	a = sqrt(x**2+z**2)
 	r = sqrt(x**2+(sqrt(y**2)-rod_length/2)**2+z**2)
 
-	mt_mid = 1.33 + delta_n*(a/radius)
-	mt_end = 1.33 + delta_n*(r/radius)**2
+	mt_mid = 1.33 + delta_n*(radius/a)
+	mt_end = 1.33 + delta_n*(radius/r)**2
 
 	permitivities = {"water" : 1.33**2, "gold" : Au_permittivity(wavelength), "pml" : 1.33**2, "mt_mid" : mt_mid**2, "mt_end" : mt_end**2}
 
@@ -181,7 +179,6 @@ def GetEsc(wavelength):
 	return Esc
 
 def Error(wavelength):
-	print("Test wavelength: ",wavelength)
 	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end') + mesh.Materials('water')
 	Esc = GetEsc(wavelength)
 	Esc_approx = GridFunction(fes)
@@ -194,32 +191,29 @@ def Error(wavelength):
 
 def RefineMesh():
 	
-	res = minimize_scalar(Error,bounds=(500,800),method='Bounded',tol=3)
+	res = minimize_scalar(Error,bounds=(500,900),method='Bounded',tol=3)
 	wavelength = res.x
-	print("Max error wavelength: ",wavelength)
+	# print("Max error wavelength: ",wavelength)
 
-	with TaskManager():
-		for x in range(2): 	
-			print("DoF:", fes.ndof)
-			Esc = GetEsc(wavelength)
-			Esc_approx = GridFunction(fes)
-			Esc_approx.Set(Esc)
-			err_func = Norm(Esc-Esc_approx)
-			elerr = Integrate(err_func,mesh,element_wise=True)
-			maxerr = -Error(wavelength)
-			for el in mesh.Elements():
-				mesh.SetRefinementFlag(el, elerr[el.nr] > 0 and (el.mat != 'pml'))
-			mesh.Refine()
-			fes.Update()
-			# print(fes.ndof)
-			print("maxerr:",maxerr)
-			# if maxerr < 1000:
-				# return wavelength
+	while fes.ndof < 120000: 
+		Esc = GetEsc(wavelength)
+		Esc_approx = GridFunction(fesLO)
+		Esc_approx.Set(Esc)
+		err_func = Norm(Esc-Esc_approx)
+		elerr = Integrate(err_func,mesh,element_wise=True)
+		maxerr = -Error(wavelength)
+		for el in mesh.Elements():
+			mesh.SetRefinementFlag(el, elerr[el.nr] > .5*maxerr and (el.mat != 'pml'))
+		mesh.Refine()
+		fes.Update()
+		fesLO.Update()
+	# print("DoF:", fes.ndof)
+	return wavelength
 
 def Extinction(wavelength):
 	k = 2*pi / wavelength
 	eps_r = RelativePermittivity(wavelength)
-	print("Wavelength: ",wavelength)
+	# print("Wavelength: ",wavelength)
 
 	Einc = IncidentWave(wavelength)
 	Esc = GetEsc(wavelength)
@@ -228,8 +222,8 @@ def Extinction(wavelength):
 	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end')
 
 	ext = 1e-18*k*Integrate((eps_r-1)*E*Conj(Einc),mesh,definedon=p).imag
-	print("Extinction: ",ext)
-	return ext
+	# print("Extinction: ",ext)
+	return -ext
 
 def DrawField(E):
 
@@ -256,6 +250,7 @@ def Saturation(aeff,ratio):
 
 	global mesh 
 	global fes 
+	global fesLO
 	global radius 
 	global length 
 	global rod_length
@@ -264,7 +259,7 @@ def Saturation(aeff,ratio):
 	print("aeff: ",aeff)
 	print("ratio: ",ratio)
 
-	mt_length_list = np.linspace(0,50,11)
+	mt_length_list = np.linspace(0,45,11)
 	ext_list = []
 
 	for mt_length in mt_length_list:
@@ -278,35 +273,38 @@ def Saturation(aeff,ratio):
 
 		mesh = Nanorod(aeff,ratio,mt_length)
 		fes = HCurl(mesh,order=2,complex=True)
+		fesLO = HCurl(mesh,order=1,complex=True)
 		E,W = fes.TnT()
 
 		p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
 		mesh.SetPML(p,'pml')
 
-		err_wavelength = RefineMesh()
+		maxerr_wavelength = RefineMesh()
 
-		res = minimize_scalar(lambda wavelength: Extinction(wavelength),method="Bounded",bounds=(400,800),tol=1)
+		res = minimize_scalar(Extinction,method="Bounded",bounds=(maxerr_wavelength-50,maxerr_wavelength+50),tol=1)
+		print("Wavelength: ",res.x)
+
 		ext_list.append(res.x)
 
 	return ext_list
 
 
-# aeff_list = np.linspace(10,100,5)
-# ar_list = np.linspace(1.1,5,5)
+aeff_list = np.linspace(10,100,5)
+ar_list = np.linspace(1.2,5,5)
 
-aeff = 40
-ratio = 2
-mt_length = 0
-mesh = Nanorod(aeff,ratio,0)
-radius = aeff*(2/(3*ratio-1))**(1/3)
-length = 2 * radius * ratio 
-rod_length = length - radius
-fes = HCurl(mesh,order=2,complex=True)
-E,W = fes.TnT()
-RefineMesh()
-ExtinctionSpectrum(400,700,40)
+# aeff = 40
+# ratio = 2
+# mt_length = 0
+# mesh = Nanorod(aeff,ratio,0)
+# radius = aeff*(2/(3*ratio-1))**(1/3)
+# length = 2 * radius * ratio 
+# rod_length = length - radius
+# fes = HCurl(mesh,order=2,complex=True)
+# E,W = fes.TnT()
+# RefineMesh()
+# ExtinctionSpectrum(400,700,40)
 
-# data = {"aeff="+str(aeff)+",ar="+str(ar) : Saturation(aeff,ar) for aeff in aeff_list for ar in ar_list}
+data = {"aeff="+str(aeff)+",ar="+str(ar) : Saturation(aeff,ar) for aeff in aeff_list for ar in ar_list}
 
-# df = pd.DataFrame(data)
-# df.to_excel("Nanorod_Saturation_Data.xlsx")
+df = pd.DataFrame(data)
+df.to_excel("Nanorod_Saturation_Data.xlsx")
