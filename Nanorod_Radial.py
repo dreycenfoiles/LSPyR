@@ -54,8 +54,8 @@ def RelativePermittivity(wavelength,delta_n=0.2):
 	a = sqrt(x**2+z**2)
 	r = sqrt(x**2+(sqrt(y**2)-rod_length/2)**2+z**2)
 
-	mt_mid = 1.33 + delta_n*(a/radius)
-	mt_end = 1.33 + delta_n*(r/radius)**2
+	mt_mid = 1.33 + delta_n*(radius/a)
+	mt_end = 1.33 + delta_n*(radius/r)**2
 
 	permitivities = {"water" : 1.33**2, "gold" : Au_permittivity(wavelength), "pml" : 1.33**2, "mt_mid" : mt_mid**2, "mt_end" : mt_end**2}
 
@@ -91,7 +91,6 @@ def GetEsc(wavelength):
 	return Esc
 
 def Error(wavelength):
-	print("Test wavelength: ",wavelength)
 	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end') + mesh.Materials('water')
 	Esc = GetEsc(wavelength)
 	Esc_approx = GridFunction(fes)
@@ -104,32 +103,29 @@ def Error(wavelength):
 
 def RefineMesh():
 	
-	res = minimize_scalar(Error,bounds=(500,800),method='Bounded',tol=3)
+	res = minimize_scalar(Error,bounds=(500,900),method='Bounded',tol=3)
 	wavelength = res.x
-	print("Max error wavelength: ",wavelength)
+	# print("Max error wavelength: ",wavelength)
 
-	for x in range(2): 	
-		print("DoF:", fes.ndof)
+	while fes.ndof < 120000: 
 		Esc = GetEsc(wavelength)
-		Esc_approx = GridFunction(fes)
+		Esc_approx = GridFunction(fesLO)
 		Esc_approx.Set(Esc)
 		err_func = Norm(Esc-Esc_approx)
 		elerr = Integrate(err_func,mesh,element_wise=True)
 		maxerr = -Error(wavelength)
 		for el in mesh.Elements():
-			mesh.SetRefinementFlag(el, elerr[el.nr] > 0 and (el.mat != 'pml'))
+			mesh.SetRefinementFlag(el, elerr[el.nr] > .5*maxerr and (el.mat != 'pml'))
 		mesh.Refine()
 		fes.Update()
-		# print(fes.ndof)
-		print("maxerr:",maxerr)
-		# if maxerr < 1000:
-			# return wavelength
-	return wavelength	
+		fesLO.Update()
+	# print("DoF:", fes.ndof)
+	return wavelength
 
 def Extinction(wavelength):
 	k = 2*pi / wavelength
 	eps_r = RelativePermittivity(wavelength)
-	print("Wavelength: ",wavelength)
+	# print("Wavelength: ",wavelength)
 
 	Einc = IncidentWave(wavelength)
 	Esc = GetEsc(wavelength)
@@ -138,8 +134,8 @@ def Extinction(wavelength):
 	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end')
 
 	ext = 1e-18*k*Integrate((eps_r-1)*E*Conj(Einc),mesh,definedon=p).imag
-	print("Extinction: ",ext)
-	return ext
+	# print("Extinction: ",ext)
+	return -ext
 
 def DrawField(E):
 
@@ -166,6 +162,7 @@ def Saturation(aeff,ratio):
 
 	global mesh 
 	global fes 
+	global fesLO
 	global radius 
 	global length 
 	global rod_length
@@ -174,7 +171,7 @@ def Saturation(aeff,ratio):
 	print("aeff: ",aeff)
 	print("ratio: ",ratio)
 
-	mt_length_list = np.linspace(0,50,11)
+	mt_length_list = np.linspace(0,45,11)
 	ext_list = []
 
 	for mt_length in mt_length_list:
@@ -188,14 +185,17 @@ def Saturation(aeff,ratio):
 
 		mesh = Nanorod(aeff,ratio,mt_length)
 		fes = HCurl(mesh,order=2,complex=True)
+		fesLO = HCurl(mesh,order=1,complex=True)
 		E,W = fes.TnT()
 
 		p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
 		mesh.SetPML(p,'pml')
 
-		err_wavelength = RefineMesh()
+		maxerr_wavelength = RefineMesh()
 
-		res = minimize_scalar(lambda wavelength: Extinction(wavelength),method="Bounded",bounds=(400,800),tol=1)
+		res = minimize_scalar(Extinction,method="Bounded",bounds=(maxerr_wavelength-50,maxerr_wavelength+50),tol=1)
+		print("Wavelength: ",res.x)
+
 		ext_list.append(res.x)
 
 	return ext_list

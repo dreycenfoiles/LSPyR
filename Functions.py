@@ -34,6 +34,23 @@ def RelativePermittivity(wavelength):
 
 def GetEsc(wavelength):
 
+class Electric_Field(object):
+
+	def __init__(self,mesh,wavelength,refine=True):
+		self.mesh = mesh
+		self.wavelength = wavelength
+		self.refine = refine 
+	
+
+	fes = HCurl(self.mesh,order=2,complex=True)
+	E,W = fes.TnT()
+
+	brick=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
+	self.mesh.SetPML(brick,'pml')
+
+	k = 2*pi / wavelength 
+
+	Einc = CoefficientFunction((0,0,exp(-1J*k*n*x)))
 	Esc = GridFunction(fes)
 	Einc = IncidentWave(wavelength)
 
