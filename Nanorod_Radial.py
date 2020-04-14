@@ -57,9 +57,9 @@ def RelativePermittivity(wavelength,delta_n=0.2):
 	mt_mid = 1.33 + delta_n*(radius/a)
 	mt_end = 1.33 + delta_n*(radius/r)**2
 
-	permitivities = {"water" : 1.33**2, "gold" : Au_permittivity(wavelength), "pml" : 1.33**2, "mt_mid" : mt_mid**2, "mt_end" : mt_end**2}
+	permittivities = {"water" : 1.33**2, "gold" : Au_permittivity(wavelength), "pml" : 1.33**2, "mt_mid" : mt_mid**2, "mt_end" : mt_end**2}
 
-	return CoefficientFunction([permitivities[mat] for mat in mesh.GetMaterials()])
+	return CoefficientFunction([permittivities[mat] for mat in mesh.GetMaterials()])
 
 
 
@@ -171,7 +171,7 @@ def Saturation(aeff,ratio):
 	print("aeff: ",aeff)
 	print("ratio: ",ratio)
 
-	mt_length_list = np.linspace(0,45,11)
+	mt_length_list = np.linspace(0,50,11)
 	ext_list = []
 
 	for mt_length in mt_length_list:
@@ -201,7 +201,7 @@ def Saturation(aeff,ratio):
 	return ext_list
 
 
-aeff_list = np.linspace(10,100,5)
+aeff_list = np.linspace(10,80,5)
 ar_list = np.linspace(1.1,5,5)
 
 data = {"aeff="+str(aeff)+",ar="+str(ar) : Saturation(aeff,ar) for aeff in aeff_list for ar in ar_list}

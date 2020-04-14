@@ -59,17 +59,20 @@ def Nanorod(aeff,ratio,mt_length):
 		cyl2 = Cylinder(Pnt(0,-2*physical_space,0),Pnt(0,2*physical_space,0),radius+100)
 		cyl3 = Cylinder(Pnt(0,-2*domain,0),Pnt(0,2*domain,0),radius+200).bc('outer')
 
-		box2 = OrthoBrick(Pnt(-physical_space,-physical_space,-physical_space),Pnt(physical_space,physical_space,physical_space)) 
-		box3 = OrthoBrick(Pnt(-domain,-domain,-domain),Pnt(domain,domain,domain)).bc('outer')
-
 		plane1 = Plane(Pnt(0,-cyl_length,0),Vec(0,-1,0))
 		plane2 = Plane(Pnt(0,cyl_length,0),Vec(0,1,0))
+
+		plane3 = Plane(Pnt(0,-physical_space,0),Vec(0,-1,0))
+		plane4 = Plane(Pnt(0,physical_space,0),Vec(0,1,0))
+
+		plane5 = Plane(Pnt(0,-domain,0),Vec(0,-1,0))
+		plane6 = Plane(Pnt(0,domain,0),Vec(0,1,0))
 
 		middle = cyl1*plane1*plane2
 
 		AuNP = (middle+sphere1+sphere2).mat('gold')
-		water = (sphere3 - AuNP).mat('water')
-		pmldom = (sphere4 - sphere3).mat('pml').maxh(80)
+		water = (cyl2*plane3*plane4 - AuNP).mat('water')
+		pmldom = (cyl3*plane5*plane6 - cyl2*plane3*plane4).mat('pml').maxh(80)
 
 		geo.Add(AuNP)
 		geo.Add(water)
@@ -89,6 +92,10 @@ def Nanorod(aeff,ratio,mt_length):
 		cyl1 = Cylinder(Pnt(0,-1,0),Pnt(0,1,0),radius)
 		#Microtubules
 		cyl2 = Cylinder(Pnt(0,-1,0),Pnt(0,1,0),particle)
+		#Water
+		cyl3 = Cylinder(Pnt(0,-1,0),Pnt(0,1,0),particle+100)
+		#PML
+		cyl4 = Cylinder(Pnt(0,-1,0),Pnt(0,1,0),particle+200).bc('outer')
 
 		#Nanoparticle endcaps
 		sphere1 = Sphere(Pnt(0,-cyl_length,0),radius)
@@ -98,13 +105,19 @@ def Nanorod(aeff,ratio,mt_length):
 		sphere3 = Sphere(Pnt(0,-cyl_length,0),particle)
 		sphere4 = Sphere(Pnt(0,cyl_length,0),particle)
 
-		#Water 
-		sphere5 = Sphere(Pnt(0,0,0),physical_space)
-		sphere6 = Sphere(Pnt(0,0,0),domain)
+		# #Water 
+		# sphere5 = Sphere(Pnt(0,0,0),physical_space)
+		# sphere6 = Sphere(Pnt(0,0,0),domain)
 
 		#Endcap cut-offs
 		plane1 = Plane(Pnt(0,-cyl_length,0),Vec(0,-1,0))
 		plane2 = Plane(Pnt(0,cyl_length,0),Vec(0,1,0))
+
+		plane3 = Plane(Pnt(0,-physical_space,0),Vec(0,-1,0))
+		plane4 = Plane(Pnt(0,physical_space,0),Vec(0,1,0))
+
+		plane5 = Plane(Pnt(0,-domain,0),Vec(0,-1,0))
+		plane6 = Plane(Pnt(0,domain,0),Vec(0,1,0))
 
 		middle = cyl1*plane1*plane2 
 		AuNP = (middle + sphere1 + sphere2).mat('gold')
@@ -116,8 +129,8 @@ def Nanorod(aeff,ratio,mt_length):
 		
 		total = cyl2*plane1*plane2 + sphere3 + sphere4
 
-		water = (sphere5 - total).mat('water')
-		pmldom = (sphere6 - sphere5).mat('pml')
+		water = (cyl3*plane3*plane4 - total).mat('water')
+		pmldom = (cyl4*plane5*plane6 - water - total).mat('pml')
 
 		geo.Add(AuNP)
 		geo.Add(mt_endcaps)
