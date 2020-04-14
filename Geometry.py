@@ -54,7 +54,7 @@ def Nanorod(aeff,ratio,mt_length):
 		#PML
 		sphere4 = Sphere(Pnt(0,0,0),domain).bc('outer')
 
-		#Delete if it works
+	
 		cyl1 = Cylinder(Pnt(0,-2*cyl_length,0),Pnt(0,2*cyl_length,0),radius)
 		cyl2 = Cylinder(Pnt(0,-2*physical_space,0),Pnt(0,2*physical_space,0),radius+100)
 		cyl3 = Cylinder(Pnt(0,-2*domain,0),Pnt(0,2*domain,0),radius+200).bc('outer')
@@ -86,7 +86,9 @@ def Nanorod(aeff,ratio,mt_length):
 
 		particle = radius + mt_length
 		physical_space = length + mt_length + 100
-		domain = physical_space + 100
+		domain = physical_space + 150
+
+		
 
 		#Nanoparticle
 		cyl1 = Cylinder(Pnt(0,-1,0),Pnt(0,1,0),radius)
@@ -95,7 +97,7 @@ def Nanorod(aeff,ratio,mt_length):
 		#Water
 		cyl3 = Cylinder(Pnt(0,-1,0),Pnt(0,1,0),particle+100)
 		#PML
-		cyl4 = Cylinder(Pnt(0,-1,0),Pnt(0,1,0),particle+200).bc('outer')
+		cyl4 = Cylinder(Pnt(0,-2,0),Pnt(0,2,0),particle+150).bc('outer')
 
 		#Nanoparticle endcaps
 		sphere1 = Sphere(Pnt(0,-cyl_length,0),radius)
@@ -105,9 +107,6 @@ def Nanorod(aeff,ratio,mt_length):
 		sphere3 = Sphere(Pnt(0,-cyl_length,0),particle)
 		sphere4 = Sphere(Pnt(0,cyl_length,0),particle)
 
-		# #Water 
-		# sphere5 = Sphere(Pnt(0,0,0),physical_space)
-		# sphere6 = Sphere(Pnt(0,0,0),domain)
 
 		#Endcap cut-offs
 		plane1 = Plane(Pnt(0,-cyl_length,0),Vec(0,-1,0))
@@ -119,18 +118,19 @@ def Nanorod(aeff,ratio,mt_length):
 		plane5 = Plane(Pnt(0,-domain,0),Vec(0,-1,0))
 		plane6 = Plane(Pnt(0,domain,0),Vec(0,1,0))
 
+
+
 		middle = cyl1*plane1*plane2 
 		AuNP = (middle + sphere1 + sphere2).mat('gold')
 
-		mt_middle = ((cyl2-AuNP)*plane1*plane2).mat('mt_mid')
-		mt_endcap1 = (sphere3- plane1 - sphere1) 
-		mt_endcap2 = (sphere4 - plane2 - sphere2)
-		mt_endcaps = (mt_endcap1 + mt_endcap2).mat('mt_end')
-		
-		total = cyl2*plane1*plane2 + sphere3 + sphere4
+		mt_middle = ((cyl2-cyl1)*plane1*plane2).mat('mt_mid')
+		endcap1_mt = (sphere3-plane1)-sphere1
+		endcap2_mt = (sphere4-plane2)-sphere2
+		mt_endcaps = (endcap1_mt + endcap2_mt).mat('mt_end')
+		total_body = AuNP + endcap1_mt + endcap2_mt + mt_middle
 
-		water = (cyl3*plane3*plane4 - total).mat('water')
-		pmldom = (cyl4*plane5*plane6 - water - total).mat('pml')
+		water = (cyl3*plane3*plane4 - total_body).mat('water')
+		pmldom = ((cyl4-cyl3)*plane5*plane6 - (water + total_body)).mat('pml').maxh(60)
 
 		geo.Add(AuNP)
 		geo.Add(mt_endcaps)
