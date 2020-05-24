@@ -54,8 +54,8 @@ def RelativePermittivity(wavelength,delta_n=0.2):
 	a = sqrt(x**2+z**2)
 	r = sqrt(x**2+(sqrt(y**2)-rod_length/2)**2+z**2)
 
-	mt_mid = 1.33 + delta_n*(radius/a)
-	mt_end = 1.33 + delta_n*(radius/r)**2
+	mt_mid = n + delta_n*(radius/a)
+	mt_end = n + delta_n*(radius/r)**2
 
 	permittivities = {"water" : 1.33**2, "gold" : Au_permittivity(wavelength), "pml" : 1.33**2, "mt_mid" : mt_mid**2, "mt_end" : mt_end**2}
 
@@ -115,7 +115,7 @@ def RefineMesh():
 		elerr = Integrate(err_func,mesh,element_wise=True)
 		maxerr = -Error(wavelength)
 		for el in mesh.Elements():
-			mesh.SetRefinementFlag(el, elerr[el.nr] > .5*maxerr and (el.mat != 'pml'))
+			mesh.SetRefinementFlag(el, elerr[el.nr] > .75*maxerr and (el.mat != 'pml'))
 		mesh.Refine()
 		fes.Update()
 		fesLO.Update()
@@ -193,7 +193,7 @@ def Saturation(aeff,ratio):
 
 		maxerr_wavelength = RefineMesh()
 
-		res = minimize_scalar(Extinction,method="Bounded",bounds=(maxerr_wavelength-50,maxerr_wavelength+50),tol=1)
+		res = minimize_scalar(Extinction,method="Bounded",bounds=(maxerr_wavelength-50,maxerr_wavelength+50))
 		print("Wavelength: ",res.x)
 
 		ext_list.append(res.x)
@@ -202,7 +202,7 @@ def Saturation(aeff,ratio):
 
 
 aeff_list = np.linspace(10,80,5)
-ar_list = np.linspace(1.1,5,5)
+ar_list = np.linspace(1.2,5,5)
 
 data = {"aeff="+str(aeff)+",ar="+str(ar) : Saturation(aeff,ar) for aeff in aeff_list for ar in ar_list}
 
