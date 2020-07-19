@@ -1,6 +1,5 @@
 from netgen.csg import *
 from ngsolve import Mesh
-from Materials import *
 
 
 #Rename nanoparticle variables if more materials are implemented 
