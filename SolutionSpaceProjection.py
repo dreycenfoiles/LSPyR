@@ -4,17 +4,16 @@ from scipy.linalg import inv, orth
 
 class SolutionSpace:
 
-	def __init__(self, fmin, fmax, fes):
+	def __init__(self, fmin, fmax):
 
-		self.fes = fes
 		self.vec_list = []
 		self.Generate(fmin,fmax)
 
 	def Projection(self, wavelength, GetError=False):
 
-		Esc = GridFunction(self.fes)
+		Esc = GridFunction(fes)
 		a, f = GetEsc(wavelength, mat=True)
-		X = orth(np.column_stack(vec_list))
+		X = orth(np.column_stack(self.vec_list))
 		Xh = np.conjugate(X.T)
 		rows, cols, vals = a.mat.COO()
 		A = sp.csr_matrix((vals, (rows, cols)))

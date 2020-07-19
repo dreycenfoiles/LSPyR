@@ -1,17 +1,67 @@
+import csv
 from math import pi
 
 import matplotlib.pyplot as plt
 import numpy as np
-from ngsolve import *
+import scipy.sparse as sp
+from scipy.linalg import inv, orth
 from scipy.optimize import minimize_scalar
+
 from Geometry import Nanorod
 from Materials import Gold
-from SolutionSpaceProjection import SolutionSpace
-import csv
+from ngsolve import *
 
 n = 1.33
 
-ngsglobals.msg_level = 3
+ngsglobals.msg_level = 0
+
+class SolutionSpace:
+
+	def __init__(self, fmin, fmax):
+
+		self.vec_list = []
+		self.Generate(fmin,fmax)
+
+	def Projection(self, wavelength, GetError=False):
+
+		Esc = GridFunction(fes)
+		a, f = GetEsc(wavelength, mat=True)
+		X = orth(np.column_stack(self.vec_list))
+		Xh = np.conjugate(X.T)
+		rows, cols, vals = a.mat.COO()
+		A = sp.csr_matrix((vals, (rows, cols)))
+		y = f.vec.FV().NumPy()
+		z = Xh@y
+		v = inv(Xh@A@X)@z
+
+		if GetError:
+			error = np.linalg.norm(y - A@X@v)/np.linalg.norm(y)
+			print(error)
+			return error
+
+		else:
+			Esc.vec.FV().NumPy()[:] = X@v
+			return Esc
+
+	def Generate(self,fmin,fmax):
+
+		for wavelength in [fmin, fmax]:
+			Esc = GetEsc(wavelength)
+			b = Esc.vec.FV().NumPy()
+			self.vec_list.append(b)
+
+		fmid = (fmin + fmax) / 2
+
+		error1 = self.Projection((fmin+fmid)/2, GetError=True)
+		error2 = self.Projection((fmid+fmax)/2, GetError=True)
+
+		if (error1 < 1e-3) and (error2 < 1e-3):
+			return 
+
+		elif error1 >= error2:
+			self.Generate(fmin, fmid)
+		else:
+			self.Generate(fmid, fmax)
 
 
 def IncidentWave(wavelength):
@@ -59,14 +109,14 @@ def GetEsc(wavelength,mat=False):
 	f = LinearForm(fes)
 	f += (eps_r-n**2)*k**2*Einc*W*dx(p)
 
-	c = Preconditioner(a,'bddc')
-
-	a.Assemble()
-	f.Assemble()
-
 	if mat:
+		a.Assemble()
+		f.Assemble()
 		return a,f 
 	else:
+		c = Preconditioner(a,'bddc', inverse="sparsecholesky")
+		a.Assemble()
+		f.Assemble()
 		Esc.vec.data = solvers.GMRes(a.mat,f.vec,pre=c.mat,printrates=False,restart=750)
 
 	return Esc
@@ -79,16 +129,13 @@ def Error(wavelength):
 	err_func = Norm(Esc-Esc_approx)
 	elerr_phy = Integrate(err_func,mesh,element_wise=True,definedon=p)
 	maxerr = max(elerr_phy)
-	print(maxerr)
 
 	return -maxerr
 
 def RefineMesh():
 
-	res = minimize_scalar(Error,bounds=(500,1500),method='Bounded',tol=8)
+	res = minimize_scalar(Error,bounds=(500,1500),method='Bounded',tol=1)
 	wavelength = res.x
-	# print("Max error wavelength: ",wavelength)
-	print(fes.ndof)
 
 	Break_Condition = False
 	while not Break_Condition: 
@@ -104,8 +151,7 @@ def RefineMesh():
 		mesh.Refine()
 		fes.Update()
 		fesLO.Update()
-
-		if maxerr < 1:
+		if maxerr < 5:
 			Break_Condition = True
 
 	return wavelength
@@ -113,10 +159,9 @@ def RefineMesh():
 def Extinction(wavelength):
 	k = 2*pi / wavelength
 	eps_r = RelativePermittivity(wavelength)
-	# print("Wavelength: ",wavelength)
 
 	Einc = IncidentWave(wavelength)
-	Esc = SSP.Projection(wavelength)
+	Esc = GetEsc(wavelength)
 	E = Einc + Esc
 	
 	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end') + mesh.Materials('mt_sphere')
@@ -180,9 +225,9 @@ def Saturation(aeff,ratio):
 		mesh.SetPML(p,'pml')
 	
 		maxerr_wavelength = RefineMesh()
-		SSP = SolutionSpace(maxerr_wavelength-100,maxerr_wavelength+100)
+		# SSP = SolutionSpace(maxerr_wavelength-100,maxerr_wavelength+100)
 
-		res = minimize_scalar(Extinction,method="Bounded",bounds=(500,1500))
+		res = minimize_scalar(Extinction,method="Bounded",bounds=(maxerr_wavelength-100,maxerr_wavelength+100))
 		print("Wavelength: ",res.x)
 
 		ext_list.append(res.x)
@@ -200,4 +245,3 @@ ar_list = np.linspace(1,5,5)
 for aeff in aeff_list:
 	 for ar in ar_list:
 		 Saturation(aeff,ar)
-
