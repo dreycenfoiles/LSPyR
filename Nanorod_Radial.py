@@ -2,23 +2,22 @@ from math import pi
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+# import pandas as pd
 from netgen.csg import *
 from ngsolve import *
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize_scalar
 from Geometry import Nanorod
+import csv
 
 n = 1.33
 
 ngsglobals.msg_level = 0
 
-
 def IncidentWave(wavelength):
 
 	k = 2*pi*n / wavelength 
-	return CoefficientFunction((0,0,exp(-1J*k*x)))
-
+	return CoefficientFunction((0,exp(-1J*k*x),0))
 
 def Au_permittivity(wavelength):
 	energy = np.array([0.64, 0.77, 0.89, 1.02, 1.14, 1.26, 1.39, 1.51, 1.64, 1.76, 1.88, 2.01, 2.13, 2.26, 2.38, 2.50, 2.63, 2.75, 2.88, 3.00, 3.12, 3.25, 3.37, 3.50, 3.62, 3.74, 3.87, 3.99, 4.12, 4.24, 4.36, 4.49, 4.61, 4.74, 4.86, 4.98, 5.11, 5.23, 5.36, 5.48, 5.60, 5.73, 5.85, 5.98, 6.10, 6.22, 6.35, 6.47, 6.60])
@@ -53,11 +52,18 @@ def RelativePermittivity(wavelength,delta_n=0.2):
 
 	a = sqrt(x**2+z**2)
 	r = sqrt(x**2+(sqrt(y**2)-rod_length/2)**2+z**2)
+	r0 = sqrt(x**2+y**2+z**2)
 
+	mt_sphere = n + delta_n*(radius/r0)**2
 	mt_mid = n + delta_n*(radius/a)
 	mt_end = n + delta_n*(radius/r)**2
 
-	permittivities = {"water" : 1.33**2, "gold" : Au_permittivity(wavelength), "pml" : 1.33**2, "mt_mid" : mt_mid**2, "mt_end" : mt_end**2}
+	permittivities = {"water" : 1.33**2, 
+					   "gold" : Au_permittivity(wavelength), 
+					   "pml" : 1.33**2, 
+					   "mt_mid" : mt_mid**2, 
+					   "mt_end" : mt_end**2, 
+					   "mt_sphere" : mt_sphere**2}
 
 	return CoefficientFunction([permittivities[mat] for mat in mesh.GetMaterials()])
 
@@ -75,7 +81,7 @@ def GetEsc(wavelength):
 	a += (curl(E)*curl(W)-k*k*eps_r*E*W)*dx
 	a += -1J*k*E.Trace()*W.Trace()*ds('outer')
 
-	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end')
+	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end') + mesh.Materials('mt_sphere')
 
 	f = LinearForm(fes)
 	f += (eps_r-n**2)*k**2*Einc*W*dx(p)
@@ -91,35 +97,38 @@ def GetEsc(wavelength):
 	return Esc
 
 def Error(wavelength):
-	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end') + mesh.Materials('water')
+	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end') + mesh.Materials('water') + mesh.Materials('mt_sphere')
 	Esc = GetEsc(wavelength)
 	Esc_approx = GridFunction(fes)
 	Esc_approx.Set(Esc)
 	err_func = Norm(Esc-Esc_approx)
 	elerr_phy = Integrate(err_func,mesh,element_wise=True,definedon=p)
 	maxerr = max(elerr_phy)
+	
 
 	return -maxerr
 
 def RefineMesh():
-	
-	res = minimize_scalar(Error,bounds=(500,900),method='Bounded',tol=3)
+
+	res = minimize_scalar(Error,bounds=(500,1500),method='Bounded',tol=3)
 	wavelength = res.x
 	# print("Max error wavelength: ",wavelength)
+	print(fes.ndof)
 
-	while fes.ndof < 120000: 
+	while fes.ndof < 400000: 
+
 		Esc = GetEsc(wavelength)
 		Esc_approx = GridFunction(fesLO)
 		Esc_approx.Set(Esc)
 		err_func = Norm(Esc-Esc_approx)
 		elerr = Integrate(err_func,mesh,element_wise=True)
+		tot_error = Integrate(err_func,mesh)
 		maxerr = -Error(wavelength)
 		for el in mesh.Elements():
-			mesh.SetRefinementFlag(el, elerr[el.nr] > .75*maxerr and (el.mat != 'pml'))
+			mesh.SetRefinementFlag(el, elerr[el.nr] > .5*maxerr and (el.mat != 'pml'))
 		mesh.Refine()
 		fes.Update()
 		fesLO.Update()
-	# print("DoF:", fes.ndof)
 	return wavelength
 
 def Extinction(wavelength):
@@ -131,7 +140,7 @@ def Extinction(wavelength):
 	Esc = GetEsc(wavelength)
 	E = Einc + Esc
 	
-	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end')
+	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end') + mesh.Materials('mt_sphere')
 
 	ext = 1e-18*k*Integrate((eps_r-1)*E*Conj(Einc),mesh,definedon=p).imag
 	# print("Extinction: ",ext)
@@ -190,21 +199,28 @@ def Saturation(aeff,ratio):
 
 		p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
 		mesh.SetPML(p,'pml')
-
+	
 		maxerr_wavelength = RefineMesh()
 
-		res = minimize_scalar(Extinction,method="Bounded",bounds=(maxerr_wavelength-50,maxerr_wavelength+50))
+		res = minimize_scalar(Extinction,method="Bounded",bounds=(500,1500))
 		print("Wavelength: ",res.x)
 
 		ext_list.append(res.x)
 
-	return ext_list
+	with open("Saturation_Data.csv","a") as csvfile:
+		writer = csv.writer(csvfile)
+		writer.writerow([aeff,ratio,ext_list])
+	# return ext_list
 
 
-aeff_list = np.linspace(10,80,5)
-ar_list = np.linspace(1.2,5,5)
+aeff_list = np.linspace(10,100,4)
+ar_list = np.linspace(1,5,5)
 
-data = {"aeff="+str(aeff)+",ar="+str(ar) : Saturation(aeff,ar) for aeff in aeff_list for ar in ar_list}
+# data = {"aeff="+str(aeff)+",ar="+str(ar) : Saturation(aeff,ar) for aeff in aeff_list for ar in ar_list}
 
-df = pd.DataFrame(data)
-df.to_excel("Nanorod_Saturation_Data.xlsx")
+for aeff in aeff_list:
+	 for ar in ar_list:
+		 Saturation(aeff,ar)
+
+# df = pd.DataFrame(data)
+# df.to_excel("Nanorod_Saturation_Data.xlsx")
