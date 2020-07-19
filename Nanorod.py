@@ -35,7 +35,8 @@ def RelativePermittivity(wavelength,delta_n=0.2):
 					   "pml" : 1.33**2, 
 					   "mt_mid" : mt_mid**2, 
 					   "mt_end" : mt_end**2, 
-					   "mt_sphere" : mt_sphere**2}
+					   "mt_sphere" : mt_sphere**2,
+					   "mt_cyl" : 1.414**2}
 
 	return CoefficientFunction([permittivities[mat] for mat in mesh.GetMaterials()])
 
@@ -60,9 +61,8 @@ def GetEsc(wavelength,mat=False):
 
 	c = Preconditioner(a,'bddc')
 
-	with TaskManager():
-		a.Assemble()
-		f.Assemble()
+	a.Assemble()
+	f.Assemble()
 
 	if mat:
 		return a,f 
@@ -116,13 +116,12 @@ def Extinction(wavelength):
 	# print("Wavelength: ",wavelength)
 
 	Einc = IncidentWave(wavelength)
-	Esc = GetEsc(wavelength)
+	Esc = SSP.Projection(wavelength)
 	E = Einc + Esc
 	
 	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end') + mesh.Materials('mt_sphere')
 
 	ext = 1e-18*k*Integrate((eps_r-1)*E*Conj(Einc),mesh,definedon=p).imag
-	# print("Extinction: ",ext)
 	return -ext
 
 def DrawField(E):
@@ -155,6 +154,7 @@ def Saturation(aeff,ratio):
 	global length 
 	global rod_length
 	global E,W
+	global SSP
 
 	print("aeff: ",aeff)
 	print("ratio: ",ratio)
@@ -180,6 +180,7 @@ def Saturation(aeff,ratio):
 		mesh.SetPML(p,'pml')
 	
 		maxerr_wavelength = RefineMesh()
+		SSP = SolutionSpace(maxerr_wavelength-100,maxerr_wavelength+100)
 
 		res = minimize_scalar(Extinction,method="Bounded",bounds=(500,1500))
 		print("Wavelength: ",res.x)
@@ -195,11 +196,8 @@ def Saturation(aeff,ratio):
 aeff_list = np.linspace(10,100,4)
 ar_list = np.linspace(1,5,5)
 
-# data = {"aeff="+str(aeff)+",ar="+str(ar) : Saturation(aeff,ar) for aeff in aeff_list for ar in ar_list}
 
 for aeff in aeff_list:
 	 for ar in ar_list:
 		 Saturation(aeff,ar)
 
-# df = pd.DataFrame(data)
-# df.to_excel("Nanorod_Saturation_Data.xlsx")

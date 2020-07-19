@@ -9,3 +9,4 @@ Test.py
 nanorod.sub
 __pycache__/Geometry.cpython-38.pyc
 __pycache__/Materials.cpython-38.pyc
+__pycache__/SolutionSpaceProjection.cpython-38.pyc
