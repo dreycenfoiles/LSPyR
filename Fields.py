@@ -10,12 +10,6 @@ def IncidentWave(wavelength):
 	k = 2*pi*n / wavelength
 	return CoefficientFunction((0,0,exp(-1J*k*x)))
 
-
-def RelativePermittivity(wavelength):
-	permittivities = {'water' : 1.33**2, 'gold' : Au_Permittivity(wavelength), 'pml' : 1.33**2}
-	return CoefficientFunction([permittivities[mat] for mat in mesh.GetMaterials()])
-
-
 def GetEsc(wavelength):
 
 	Esc = GridFunction(fes)
