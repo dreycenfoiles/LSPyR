@@ -4,26 +4,44 @@ from Materials import *
 
 
 #Rename nanoparticle variables if more materials are implemented 
-#Could maybe be improved by changing water and PMl domains into cylinders to save on space
 
-def Nanosphere(particle):
+def Nanosphere(particle,mt_length):
 
-	physical_space = particle + 150
+	physical_space = particle + mt_length + 150
 	domain = physical_space + 100
 
 	geo = CSGeometry()
+	
+	if mt_length == 0:
 
-	sphere1 = Sphere(Pnt(0,0,0),particle)
-	sphere2 = Sphere(Pnt(0,0,0),physical_space)
-	sphere3 = Sphere(Pnt(0,0,0),domain).bc('outer')
+		sphere1 = Sphere(Pnt(0,0,0),particle)
+		sphere2 = Sphere(Pnt(0,0,0),physical_space)
+		sphere3 = Sphere(Pnt(0,0,0),domain).bc('outer')
 
-	AuNP = sphere1.mat('gold')
-	water = (sphere2 - sphere1).mat('water')
-	pml = (sphere3 - sphere2).mat('pml').maxh(80)
+		AuNP = sphere1.mat('gold')
+		water = (sphere2 - sphere1).mat('water')
+		pml = (sphere3 - sphere2).mat('pml').maxh(80)
 
-	geo.Add(AuNP)
-	geo.Add(water)
-	geo.Add(pml)
+		geo.Add(AuNP)
+		geo.Add(water)
+		geo.Add(pml)
+
+	else:
+
+		sphere1 = Sphere(Pnt(0,0,0),particle)
+		sphere2 = Sphere(Pnt(0,0,0),particle+mt_length)
+		sphere3 = Sphere(Pnt(0,0,0),physical_space)
+		sphere4 = Sphere(Pnt(0,0,0),domain).bc('outer')
+
+		AuNP = sphere1.mat('gold')
+		mt = (sphere2 - sphere1).mat('mt_sphere')
+		water = (sphere3 - sphere2).mat('water')
+		pml = (sphere4 - sphere3).mat('pml').maxh(80)
+
+		geo.Add(AuNP)
+		geo.Add(mt)
+		geo.Add(water)
+		geo.Add(pml)
 
 	ngmesh = geo.GenerateMesh()
 
@@ -35,6 +53,9 @@ def Nanosphere(particle):
 def Nanorod(aeff,ratio,mt_length):
 
 	geo = CSGeometry()
+
+	if ratio == 1:
+		return Nanosphere(aeff,mt_length)
 
 	if mt_length == 0:
 
@@ -130,7 +151,7 @@ def Nanorod(aeff,ratio,mt_length):
 		total_body = AuNP + endcap1_mt + endcap2_mt + mt_middle
 
 		water = (cyl3*plane3*plane4 - total_body).mat('water')
-		pmldom = ((cyl4-cyl3)*plane5*plane6 - (water + total_body)).mat('pml').maxh(60)
+		pmldom = ((cyl4-cyl3)*plane5*plane6 - (water + total_body)).mat('pml').maxh(50)
 
 		geo.Add(AuNP)
 		geo.Add(mt_endcaps)
