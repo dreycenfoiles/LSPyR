@@ -238,10 +238,12 @@ def Saturation(aeff,ratio):
 	# return ext_list
 
 
-aeff_list = np.linspace(10,100,4)
-ar_list = np.linspace(1,5,5)
+if __name__ == "__main__":
+
+	aeff_list = np.linspace(10,100,4)
+	ar_list = np.linspace(1,5,5)
 
 
-for aeff in aeff_list:
-	 for ar in ar_list:
-		 Saturation(aeff,ar)
+	for aeff in aeff_list:
+		for ar in ar_list:
+			Saturation(aeff,ar)

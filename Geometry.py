@@ -42,7 +42,7 @@ def Nanosphere(particle,mt_length):
 		geo.Add(water)
 		geo.Add(pml)
 
-	ngmesh = geo.GenerateMesh()
+	ngmesh = geo.GenerateMesh(maxh=40)
 
 	mesh = Mesh(ngmesh)
 
@@ -158,7 +158,7 @@ def Nanorod(aeff,ratio,mt_length):
 		geo.Add(water)
 		geo.Add(pmldom)
 		
-	ngmesh = geo.GenerateMesh()
+	ngmesh = geo.GenerateMesh(maxh=40)
 
 	mesh = Mesh(ngmesh)
 	return mesh
