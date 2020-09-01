@@ -6,8 +6,27 @@ class SolutionSpace:
 
 	def __init__(self, fmin, fmax):
 
-		self.vec_list = []
 		self.Generate(fmin,fmax)
+
+	def Generate(self,fmin,fmax):
+
+		tol = 1e-3
+
+		for wavelength in [fmin, fmax]:
+			Esc = GetEsc(wavelength)
+			b = Esc.vec.FV().NumPy()
+			self.vec_list.append(b)
+
+		error1 = self.Projection((fmin+fmid)/2, GetError=True)
+		error2 = self.Projection((fmid+fmax)/2, GetError=True)
+
+		if (error1 < tol) and (error2 < tol):
+			return 
+
+		elif error1 >= error2:
+			self.Generate(fmin, fmid)
+		else:
+			self.Generate(fmid, fmax)
 
 	def Projection(self, wavelength, GetError=False):
 
@@ -29,22 +48,6 @@ class SolutionSpace:
 			Esc.vec.FV().NumPy()[:] = X@v
 			return Esc
 
-	def Generate(self,fmin,fmax):
-
-		for wavelength in [fmin, fmax]:
-			Esc = GetEsc(wavelength)
-			b = Esc.vec.FV().NumPy()
-			self.vec_list.append(b)
-
-		error1 = self.Projection((fmin+fmid)/2, GetError=True)
-		error2 = self.Projection((fmid+fmax)/2, GetError=True)
-
-		if (error1 < 1e-3) and (error2 < 1e-3):
-			return 
-
-		elif error1 >= error2:
-			self.Generate(fmin, fmid)
-		else:
-			self.Generate(fmid, fmax)
+	
 
 
