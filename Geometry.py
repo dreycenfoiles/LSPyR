@@ -150,7 +150,7 @@ def Nanorod(aeff,ratio,mt_length):
 		total_body = AuNP + endcap1_mt + endcap2_mt + mt_middle
 
 		water = (cyl3*plane3*plane4 - total_body).mat('water')
-		pmldom = ((cyl4-cyl3)*plane5*plane6 - (water + total_body)).mat('pml').maxh(50)
+		pmldom = ((cyl4-cyl3)*plane5*plane6 - (water + total_body)).mat('pml').maxh(60)
 
 		geo.Add(AuNP)
 		geo.Add(mt_endcaps)
@@ -158,7 +158,7 @@ def Nanorod(aeff,ratio,mt_length):
 		geo.Add(water)
 		geo.Add(pmldom)
 		
-	ngmesh = geo.GenerateMesh(maxh=40)
+	ngmesh = geo.GenerateMesh()
 
 	mesh = Mesh(ngmesh)
 	return mesh
