@@ -122,39 +122,49 @@ def GetEsc(wavelength,mat=False):
 	return Esc
 
 def Error(wavelength):
-	p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end') + mesh.Materials('water') + mesh.Materials('mt_sphere')
-	Esc = GetEsc(wavelength)
-	Esc_approx = GridFunction(fes)
-	Esc_approx.Set(Esc)
-	err_func = Norm(Esc-Esc_approx)
-	elerr_phy = Integrate(err_func,mesh,element_wise=True,definedon=p)
-	maxerr = max(elerr_phy)
 
-	return -maxerr
+    p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials('mt_end') + mesh.Materials('water') + mesh.Materials('mt_sphere')
 
-def RefineMesh():
+    Esc = GetEsc(wavelength)
+    Esc_approx = GridFunction(fesLO)
+    Esc_approx.Set(Esc)
 
-	res = minimize_scalar(Error,bounds=(500,1500),method='Bounded',tol=1)
-	wavelength = res.x
+    err_func = Norm(Esc-Esc_approx)
+    elerr_phy = Integrate(err_func,mesh,element_wise=True,definedon=p)
+    elerr = Integrate(err_func,mesh,element_wise=True)
+    maxerr = max(elerr_phy)
 
-	Break_Condition = False
-	while not Break_Condition: 
+    return elerr, maxerr
 
-		Esc = GetEsc(wavelength)
-		Esc_approx = GridFunction(fesLO)
-		Esc_approx.Set(Esc)
-		err_func = Norm(Esc-Esc_approx)
-		elerr = Integrate(err_func,mesh,element_wise=True)
-		maxerr = -Error(wavelength)
-		for el in mesh.Elements():
-			mesh.SetRefinementFlag(el, elerr[el.nr] > .5*maxerr and (el.mat != 'pml'))
-		mesh.Refine()
-		fes.Update()
-		fesLO.Update()
-		if maxerr < 5:
-			Break_Condition = True
+def RefineMesh(min,max):
 
-	return wavelength
+    mid = (min + max)/2
+    elerr, maxerr = Error(mid)
+
+    print("DoF: ",fes.ndof)
+    print("Max Error: ", maxerr)
+
+    if maxerr < 100:
+        return
+
+    else:
+        for el in mesh.Elements():
+            mesh.SetRefinementFlag(el, elerr[el.nr] > .5*maxerr and (el.mat != 'pml'))
+
+        mesh.Refine()
+        fes.Update()
+        fesLO.Update()
+
+        mid1 = (min + mid)/2
+        mid2 = (max + mid)/2
+
+        error1 = Error(mid1)[1]
+        error2 = Error(mid2)[1]
+
+        if error1 > error2:
+            RefineMesh(mid1,mid)
+        else:
+            RefineMesh(mid,mid2)
 
 def Extinction(wavelength):
 	k = 2*pi / wavelength
@@ -240,10 +250,16 @@ def Saturation(aeff,ratio):
 
 if __name__ == "__main__":
 
-	aeff_list = np.linspace(10,100,4)
-	ar_list = np.linspace(1,5,5)
+	# aeff_list = np.linspace(10,100,4)
+	# ar_list = np.linspace(1,5,5)
 
 
-	for aeff in aeff_list:
-		for ar in ar_list:
-			Saturation(aeff,ar)
+	# for aeff in aeff_list:
+	# 	for ar in ar_list:
+	# 		Saturation(aeff,ar)
+
+	RefineMesh(500,1000)
+	wavelength_list = np.linspace(400,800)
+	data = [(wavelength,Extinction(wavelength)) for wavelength in wavelength_list]
+
+	plt.plot(data[:,0],data[:,1])
