@@ -1,5 +1,5 @@
 import numpy as np
-from scipy import interp
+from scipy.interpolate import interp1d
 
 def Gold(wavelength):
 
@@ -26,8 +26,13 @@ def Gold(wavelength):
 	1.32 + 1.203j, 1.28 + 1.188j])
 
 	permittivity = refractive_indices**2
+	real_permittivity = permittivity.real
+	imag_permittivity = permittivity.imag 
+	
+	real_fit = interp1d(wavelengths,real_permittivity,kind='cubic')
+	imag_fit = interp1d(wavelengths,imag_permittivity,kind='cubic')
 
-	return interp(wavelength,wavelengths,permittivity)
+	return np.complex(real_fit(wavelength),imag_fit(wavelength))
 
 
 
