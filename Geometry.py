@@ -1,13 +1,14 @@
+from ngsolve import Mesh, pml
 from netgen.csg import *
-from ngsolve import Mesh
+
 
 
 #Rename nanoparticle variables if more materials are implemented 
 
 def Nanosphere(particle,mt_length):
 
-	physical_space = particle + mt_length + 150
-	domain = physical_space + 100
+	physical_space = particle + mt_length + 200
+	domain = physical_space + 150
 
 	geo = CSGeometry()
 	
@@ -19,11 +20,11 @@ def Nanosphere(particle,mt_length):
 
 		AuNP = sphere1.mat('gold')
 		water = (sphere2 - sphere1).mat('water')
-		pml = (sphere3 - sphere2).mat('pml').maxh(80)
+		pmldom = (sphere3 - sphere2).mat('pml')
 
 		geo.Add(AuNP)
 		geo.Add(water)
-		geo.Add(pml)
+		geo.Add(pmldom)
 
 	else:
 
@@ -35,16 +36,19 @@ def Nanosphere(particle,mt_length):
 		AuNP = sphere1.mat('gold')
 		mt = (sphere2 - sphere1).mat('mt_sphere')
 		water = (sphere3 - sphere2).mat('water')
-		pml = (sphere4 - sphere3).mat('pml').maxh(80)
+		pmldom = (sphere4 - sphere3).mat('pml').maxh(80)
 
 		geo.Add(AuNP)
 		geo.Add(mt)
 		geo.Add(water)
-		geo.Add(pml)
+		geo.Add(pmldom)
 
-	ngmesh = geo.GenerateMesh(maxh=40)
+	ngmesh = geo.GenerateMesh()
 
 	mesh = Mesh(ngmesh)
+
+	p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
+	mesh.SetPML(p,'pml')
 
 	return mesh
 
@@ -161,4 +165,8 @@ def Nanorod(aeff,ratio,mt_length):
 	ngmesh = geo.GenerateMesh()
 
 	mesh = Mesh(ngmesh)
+
+	p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
+	mesh.SetPML(p,'pml')
+
 	return mesh
