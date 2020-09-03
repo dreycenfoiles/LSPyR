@@ -127,7 +127,7 @@ class Simulation:
 		print("DoF: ", fes.ndof)
 		print("Max Error: ", maxerr)
 
-		if maxerr < 100:
+		if maxerr < tol:
 			return
 
 		else:
