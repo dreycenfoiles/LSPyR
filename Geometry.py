@@ -7,8 +7,8 @@ from netgen.csg import *
 
 def Nanosphere(particle,mt_length):
 
-	physical_space = particle + mt_length + 200
-	domain = physical_space + 150
+	physical_space = particle + mt_length + 250
+	domain = physical_space + 300
 
 	geo = CSGeometry()
 	
@@ -36,7 +36,7 @@ def Nanosphere(particle,mt_length):
 		AuNP = sphere1.mat('gold')
 		mt = (sphere2 - sphere1).mat('mt_sphere')
 		water = (sphere3 - sphere2).mat('water')
-		pmldom = (sphere4 - sphere3).mat('pml').maxh(80)
+		pmldom = (sphere4 - sphere3).mat('pml').maxh(60)
 
 		geo.Add(AuNP)
 		geo.Add(mt)
