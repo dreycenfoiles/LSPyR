@@ -1,33 +1,54 @@
+from ngsolve import Mesh, pml
 from netgen.csg import *
-from ngsolve import Mesh
-from Materials import *
+
 
 
 #Rename nanoparticle variables if more materials are implemented 
-#Could maybe be improved by changing water and PMl domains into cylinders to save on space
 
-def Nanosphere(particle):
+def Nanosphere(particle,mt_length):
 
-	physical_space = particle + 150
-	domain = physical_space + 100
+	physical_space = particle + mt_length + 250
+	domain = physical_space + 300
 
 	geo = CSGeometry()
+	
+	if mt_length == 0:
 
-	sphere1 = Sphere(Pnt(0,0,0),particle)
-	sphere2 = Sphere(Pnt(0,0,0),physical_space)
-	sphere3 = Sphere(Pnt(0,0,0),domain).bc('outer')
+		sphere1 = Sphere(Pnt(0,0,0),particle)
+		sphere2 = Sphere(Pnt(0,0,0),physical_space)
+		sphere3 = Sphere(Pnt(0,0,0),domain).bc('outer')
 
-	AuNP = sphere1.mat('gold')
-	water = (sphere2 - sphere1).mat('water')
-	pml = (sphere3 - sphere2).mat('pml').maxh(80)
+		AuNP = sphere1.mat('gold')
+		water = (sphere2 - sphere1).mat('water')
+		pmldom = (sphere3 - sphere2).mat('pml')
 
-	geo.Add(AuNP)
-	geo.Add(water)
-	geo.Add(pml)
+		geo.Add(AuNP)
+		geo.Add(water)
+		geo.Add(pmldom)
+
+	else:
+
+		sphere1 = Sphere(Pnt(0,0,0),particle)
+		sphere2 = Sphere(Pnt(0,0,0),particle+mt_length)
+		sphere3 = Sphere(Pnt(0,0,0),physical_space)
+		sphere4 = Sphere(Pnt(0,0,0),domain).bc('outer')
+
+		AuNP = sphere1.mat('gold')
+		mt = (sphere2 - sphere1).mat('mt_sphere')
+		water = (sphere3 - sphere2).mat('water')
+		pmldom = (sphere4 - sphere3).mat('pml').maxh(60)
+
+		geo.Add(AuNP)
+		geo.Add(mt)
+		geo.Add(water)
+		geo.Add(pmldom)
 
 	ngmesh = geo.GenerateMesh()
 
 	mesh = Mesh(ngmesh)
+
+	p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
+	mesh.SetPML(p,'pml')
 
 	return mesh
 
@@ -35,6 +56,9 @@ def Nanosphere(particle):
 def Nanorod(aeff,ratio,mt_length):
 
 	geo = CSGeometry()
+
+	if ratio == 1:
+		return Nanosphere(aeff,mt_length)
 
 	if mt_length == 0:
 
@@ -141,4 +165,8 @@ def Nanorod(aeff,ratio,mt_length):
 	ngmesh = geo.GenerateMesh()
 
 	mesh = Mesh(ngmesh)
+
+	p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
+	mesh.SetPML(p,'pml')
+
 	return mesh
