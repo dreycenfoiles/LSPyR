@@ -1,0 +1,17 @@
+\documentclass{article}
+
+\usepackage{physics}
+
+\begin{document}
+
+\section{Methods}
+    The finite-element method (FEM) is a general method for solving partial differential equations (PDE's) based off of the variational principle. 
+
+    To simulate our system, we use the vector Helmholtz equation that is derived from the time-harmonic form of Maxwell's equations. 
+    \begin{equation}
+        \curl \curl \vec{\textbf{E}} - k_0^2\epsilon_r\textbf{E}
+    \end{equation}
+
+    For our simulation, we used Netgen to create a mesh of the nanoparticle and of the surrounding domain. To avoid non-physical artifacts created by an artificially truncated domain, we use perfectly matched layers (PML) with a thickness of 200 nm. to absorb scattered light. Because PML is poorly suited for absorbing the amplified electric field, sufficient distance between the nanoparticle and the PML is required. We found that a minimum distance of 150 nm from the nanoparticle to the PML to be large enough to avoid artifacts while still keeping computation time low. 
+
+\end{document}
