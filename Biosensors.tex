@@ -9,9 +9,22 @@
 
     To simulate our system, we use the vector Helmholtz equation that is derived from the time-harmonic form of Maxwell's equations. 
     \begin{equation}
-        \curl \curl \vec{\textbf{E}} - k_0^2\epsilon_r\textbf{E}
+        \curl \curl \textbf{E} - k_0^2\epsilon_r\textbf{E} = 0
     \end{equation}
+    Where \(\textbf{E}\) is the electric field, \(k_0\) is the wave-number in free space and \(\epsilon_r\) is the relative permittivity. To put the equation in a form that is usable for FEM. A weak form must be derived. To do this, we multiple by a test function \(\textbf{W}\) and integrate over the domain. We then integrate by parts. \cite{jinFiniteElementMethod2014,jinFiniteElementAnalysis2009}
+    \begin{equation}
+        (\curl \textbf{E}) \cdot (\curl \textbf{W}) - k_0^2 \epsilon_r \textbf{E} \cdot \textbf{W} = 0
+    \end{equation}
+    To introduce boundary conditions, we use the scattered-field formulation and excite the system with an incident plane wave. \cite{jinFiniteElementMethod2014} Giving us the following equation
 
     For our simulation, we used Netgen to create a mesh of the nanoparticle and of the surrounding domain. To avoid non-physical artifacts created by an artificially truncated domain, we use perfectly matched layers (PML) with a thickness of 200 nm. to absorb scattered light. Because PML is poorly suited for absorbing the amplified electric field, sufficient distance between the nanoparticle and the PML is required. We found that a minimum distance of 150 nm from the nanoparticle to the PML to be large enough to avoid artifacts while still keeping computation time low. 
+
+    After calculating the electric field through FEM, we used the following equations to calculate the extinction cross section. \cite{mcmahonGoldNanoparticleDimer2009,yangFinitedifferenceTimeDomain1996}
+    \begin{equation}
+        \sigma_e = \frac{k}{|\textbf{E}_0|^2}\, \text{Im}\left\{\iiint_v  \, [\epsilon(\textbf{r}) - 1] \textbf{E}(\textbf{r}) \cdot \textbf{E}_0^*(\textbf{r}) \mathrm{d}^3\textbf{r}  \right\}
+    \end{equation}
+    where \(v\) is the volume of the scattering object.
+\bibliographystyle{unsrt}
+\bibliography{mylib}
 
 \end{document}
