@@ -54,9 +54,9 @@ def Nanosphere(particle,mt_length,mt_model="radial"):
 			sphere2 = Sphere(Pnt(0,0,0),physical_space)
 			sphere3 = Sphere(Pnt(0,0,0),domain).bc('outer')
 
-			cyl1 = Cylinder(Pnt(0,0,0),Pnt(0,0,1),25)
-			cyl2 = Cylinder(Pnt(0,0,0),Pnt(0,1,0),25)
-			cyl3 = Cylinder(Pnt(0,0,0),Pnt(1,0,0),25)
+			cyl1 = Cylinder(Pnt(0,0,0),Pnt(0,0,1),12.5)
+			cyl2 = Cylinder(Pnt(0,0,0),Pnt(0,1,0),12.5)
+			cyl3 = Cylinder(Pnt(0,0,0),Pnt(1,0,0),12.5)
 
 			plane1 = Plane(Pnt(0,0,mt_length+particle),Vec(0,0,1))
 			plane2 = Plane(Pnt(0,0,-(mt_length+particle)),Vec(0,0,-1))

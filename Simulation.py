@@ -36,25 +36,21 @@ class Simulation:
         mesh = self.mesh
         # sqrt(y**2) is for absolute value of y
 
-        # a = sqrt(x**2+z**2)
-        # r = sqrt(x**2+(sqrt(y**2)-rod_length/2)**2+z**2)
-        # r0 = sqrt(x**2+y**2+z**2)
+        a = sqrt(x**2+z**2)
+        r = sqrt(x**2+(sqrt(y**2)-rod_length/2)**2+z**2)
+        r0 = sqrt(x**2+y**2+z**2)
 
-        # mt_sphere = n + delta_n*(radius/r0)**2
-        # mt_mid = n + delta_n*(radius/a)
-        # mt_end = n + delta_n*(radius/r)**2
+        mt_sphere = n + delta_n*(radius/r0)**2
+        mt_mid = n + delta_n*(radius/a)
+        mt_end = n + delta_n*(radius/r)**2
 
-        # permittivities = {"water" : 1.33**2,
-        # 				   "gold" : Gold(wavelength),
-        # 				   "pml" : 1.33**2,
-        # 				   "mt_mid" : mt_mid**2,
-        # 				   "mt_end" : mt_end**2,
-        # 				   "mt_sphere" : mt_sphere**2,
-        # 				   "mt_cyl" : 1.414**2}
-
-        permittivities = {"water": n**2,
-                          "gold": Gold(wavelength),
-                          "pml": n**2}
+        permittivities = {"water" : 1.33**2,
+        				   "gold" : Gold(wavelength),
+        				   "pml" : 1.33**2,
+        				   "mt_mid" : mt_mid**2,
+        				   "mt_end" : mt_end**2,
+        				   "mt_sphere" : mt_sphere**2,
+        				   "mt_cyl" : 1.414**2}
 
         return CoefficientFunction([permittivities[mat] for mat in mesh.GetMaterials()])
 
