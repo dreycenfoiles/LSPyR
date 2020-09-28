@@ -5,10 +5,10 @@ from netgen.csg import *
 
 #Rename nanoparticle variables if more materials are implemented 
 
-def Nanosphere(particle,mt_length):
+def Nanosphere(particle,mt_length,mt_model="radial"):
 
-	physical_space = particle + mt_length + 250
-	domain = physical_space + 300
+	physical_space = particle + mt_length + 150
+	domain = physical_space + 200
 
 	geo = CSGeometry()
 	
@@ -28,20 +28,54 @@ def Nanosphere(particle,mt_length):
 
 	else:
 
-		sphere1 = Sphere(Pnt(0,0,0),particle)
-		sphere2 = Sphere(Pnt(0,0,0),particle+mt_length)
-		sphere3 = Sphere(Pnt(0,0,0),physical_space)
-		sphere4 = Sphere(Pnt(0,0,0),domain).bc('outer')
+		if mt_model == "radial":
 
-		AuNP = sphere1.mat('gold')
-		mt = (sphere2 - sphere1).mat('mt_sphere')
-		water = (sphere3 - sphere2).mat('water')
-		pmldom = (sphere4 - sphere3).mat('pml').maxh(60)
+			sphere1 = Sphere(Pnt(0,0,0),particle)
+			sphere2 = Sphere(Pnt(0,0,0),particle+mt_length)
+			sphere3 = Sphere(Pnt(0,0,0),physical_space)
+			sphere4 = Sphere(Pnt(0,0,0),domain).bc('outer')
 
-		geo.Add(AuNP)
-		geo.Add(mt)
-		geo.Add(water)
-		geo.Add(pmldom)
+			AuNP = sphere1.mat('gold')
+			mt = (sphere2 - sphere1).mat('mt_sphere')
+			water = (sphere3 - sphere2).mat('water')
+			pmldom = (sphere4 - sphere3).mat('pml').maxh(60)
+
+			geo.Add(AuNP)
+			geo.Add(mt)
+			geo.Add(water)
+			geo.Add(pmldom)
+		
+		else: 
+
+			sphere1 = Sphere(Pnt(0,0,0),particle)
+			sphere2 = Sphere(Pnt(0,0,0),physical_space)
+			sphere3 = Sphere(Pnt(0,0,0),domain).bc('outer')
+
+			cyl1 = Cylinder(Pnt(0,0,0),Pnt(0,0,1),25)
+			cyl2 = Cylinder(Pnt(0,0,0),Pnt(0,1,0),25)
+			cyl3 = Cylinder(Pnt(0,0,0),Pnt(1,0,0),25)
+
+			plane1 = Plane(Pnt(0,0,mt_length),Vec(0,0,1))
+			plane2 = Plane(Pnt(0,0,-mt_length),Vec(0,0,-1))
+			plane3 = Plane(Pnt(0,mt_length,0),Vec(0,1,0))
+			plane4 = Plane(Pnt(0,-mt_length,0),Vec(0,-1,0))
+			plane5 = Plane(Pnt(mt_length,0,0),Vec(1,0,0))
+			plane6 = Plane(Pnt(-mt_length,0,0),Vec(-1,0,0))
+
+			mt1 = ((plane1*cyl1*plane2)*sphere1).mat("mt_cyl")
+			mt2 = ((plane3*cyl2*plane4)*sphere1).mat("mt_cyl")
+			mt3 = ((plane5*cyl3*plane6)*sphere1).mat("mt_cyl")
+
+			AuNP = sphere1.mat("gold")
+			water = (sphere2 - (sphere1 + mt1+mt2+mt3)).mat("water")
+			pmldom = (sphere3 - sphere2).mat("pml").maxh(60)
+
+			# geo.Add(AuNP)
+			# geo.Add(mt1)
+			# geo.Add(mt2)
+			geo.Add(mt3)
+			# geo.Add(water)
+			# geo.Add(pmldom)
 
 	ngmesh = geo.GenerateMesh()
 
