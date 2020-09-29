@@ -94,8 +94,9 @@ class Simulation:
         fes = self.fes
         fesLO = self.fesLO
 
-        p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials(
-            'mt_end') + mesh.Materials('water') + mesh.Materials('mt_sphere') + mesh.Materials('mt_cyl')
+        p = mesh.Materials('gold') + mesh.Materials('mt_mid') + \
+            mesh.Materials('mt_end') + mesh.Materials('water') + \ 
+            mesh.Materials('mt_sphere') + mesh.Materials('mt_cyl')
 
         Esc = self.GetEsc(wavelength)
         Esc_approx = GridFunction(fesLO)
