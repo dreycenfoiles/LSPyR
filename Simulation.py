@@ -3,10 +3,7 @@ from math import pi
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.sparse as sp
 from ngsolve import *
-from scipy.linalg import inv, orth
-from scipy.optimize import minimize_scalar
 
 from Geometry import *
 from Materials import Gold
@@ -34,9 +31,9 @@ class Simulation:
     def RelativePermittivity(self, wavelength, delta_n=0.2):
 
         mesh = self.mesh
-        # sqrt(y**2) is for absolute value of y
 
         a = sqrt(x**2+z**2)
+        # sqrt(y**2) is for absolute value of y
         r = sqrt(x**2+(sqrt(y**2)-rod_length/2)**2+z**2)
         r0 = sqrt(x**2+y**2+z**2)
 
@@ -44,13 +41,13 @@ class Simulation:
         mt_mid = n + delta_n*(radius/a)
         mt_end = n + delta_n*(radius/r)**2
 
-        permittivities = {"water" : 1.33**2,
-        				   "gold" : Gold(wavelength),
-        				   "pml" : 1.33**2,
-        				   "mt_mid" : mt_mid**2,
-        				   "mt_end" : mt_end**2,
-        				   "mt_sphere" : mt_sphere**2,
-        				   "mt_cyl" : 1.414**2}
+        permittivities = {"water": 1.33**2,
+                          "gold": Gold(wavelength),
+                          "pml": 1.33**2,
+                          "mt_mid": mt_mid**2,
+                          "mt_end": mt_end**2,
+                          "mt_sphere": mt_sphere**2,
+                          "mt_cyl": 1.414**2}
 
         return CoefficientFunction([permittivities[mat] for mat in mesh.GetMaterials()])
 
@@ -72,7 +69,8 @@ class Simulation:
         a += -1J*k*E.Trace()*W.Trace()*ds('outer')
 
         p = mesh.Materials('gold') + mesh.Materials('mt_mid') + \
-            mesh.Materials('mt_end') + mesh.Materials('mt_sphere')
+            mesh.Materials('mt_end') + mesh.Materials('mt_sphere') + \
+            mesh.Materials('mt_cyl')
 
         f = LinearForm(fes)
         f += (eps_r-n**2)*k**2*Einc*W*dx(p)
@@ -97,7 +95,7 @@ class Simulation:
         fesLO = self.fesLO
 
         p = mesh.Materials('gold') + mesh.Materials('mt_mid') + mesh.Materials(
-            'mt_end') + mesh.Materials('water') + mesh.Materials('mt_sphere')
+            'mt_end') + mesh.Materials('water') + mesh.Materials('mt_sphere') + mesh.Materials('mt_cyl')
 
         Esc = self.GetEsc(wavelength)
         Esc_approx = GridFunction(fesLO)
@@ -157,7 +155,8 @@ class Simulation:
         E = Einc + Esc
 
         p = mesh.Materials('gold') + mesh.Materials('mt_mid') + \
-            mesh.Materials('mt_end') + mesh.Materials('mt_sphere')
+            mesh.Materials('mt_end') + mesh.Materials('mt_sphere') + \
+            mesh.Materials('mt_cyl')
 
         ext = 1e-18*k*Integrate((eps_r-1)*E*Conj(Einc), mesh, definedon=p).imag
         return -ext
