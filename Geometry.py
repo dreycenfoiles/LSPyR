@@ -41,7 +41,7 @@ def Nanosphere(particle,mt_length,mt_model="radial"):
 			AuNP = sphere1.mat('gold')
 			mt = (sphere2 - sphere1).mat('mt_sphere')
 			water = (sphere3 - sphere2).mat('water')
-			pmldom = (sphere4 - sphere3).mat('pml').maxh(60)
+			pmldom = (sphere4 - sphere3).mat('pml')
 
 			geo.Add(AuNP)
 			geo.Add(mt)
@@ -71,7 +71,7 @@ def Nanosphere(particle,mt_length,mt_model="radial"):
 
 			AuNP = sphere1.mat("gold")
 			water = (sphere2 - (sphere1*mt1*mt2*mt3)).mat("water")
-			pmldom = (sphere3 - sphere2).mat("pml").maxh(60)
+			pmldom = (sphere3 - sphere2).mat("pml")
 
 			geo.Add(AuNP)
 			geo.Add(mt1)
@@ -82,14 +82,12 @@ def Nanosphere(particle,mt_length,mt_model="radial"):
 
 	ngmesh = geo.GenerateMesh()
 
-	return ngmesh
-
 	mesh = Mesh(ngmesh)
 
 	p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
 	mesh.SetPML(p,'pml')
 
-	return mesh
+	return mesh, particle, particle
 
 
 def Nanorod(aeff,ratio,mt_length):
@@ -208,4 +206,4 @@ def Nanorod(aeff,ratio,mt_length):
 	p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
 	mesh.SetPML(p,'pml')
 
-	return mesh
+	return mesh, radius, length
