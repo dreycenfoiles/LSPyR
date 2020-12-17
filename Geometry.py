@@ -8,10 +8,10 @@ from ngsolve import Draw
 
 #Rename nanoparticle variables if more materials are implemented 
 
-def Nanosphere(particle,mt_length,mt_model="radial"):
+def Nanosphere(particle,mt_length, physical_space, domain, mt_model="radial"):
 
-	physical_space = particle + mt_length + 150
-	domain = physical_space + 200
+	# physical_space = particle + mt_length + 150
+	# domain = physical_space + 200
 
 	geo = CSGeometry()
 	
@@ -70,7 +70,7 @@ def Nanosphere(particle,mt_length,mt_model="radial"):
 			mt3 = ((plane5*cyl3*plane6) - sphere1).mat("mt_cyl")
 
 			AuNP = sphere1.mat("gold")
-			water = (sphere2 - (sphere1*mt1*mt2*mt3)).mat("water")
+			water = ((((sphere2 - mt1) - mt2) - mt3) - AuNP).mat("water")
 			pmldom = (sphere3 - sphere2).mat("pml")
 
 			geo.Add(AuNP)
@@ -133,7 +133,7 @@ def Nanorod(aeff,ratio,mt_length):
 
 		AuNP = (middle+sphere1+sphere2).mat('gold')
 		water = (cyl2*plane3*plane4 - AuNP).mat('water')
-		pmldom = (cyl3*plane5*plane6 - cyl2*plane3*plane4).mat('pml').maxh(80)
+		pmldom = (cyl3*plane5*plane6 - cyl2*plane3*plane4).mat('pml')
 
 		geo.Add(AuNP)
 		geo.Add(water)
@@ -191,7 +191,7 @@ def Nanorod(aeff,ratio,mt_length):
 		total_body = AuNP + endcap1_mt + endcap2_mt + mt_middle
 
 		water = (cyl3*plane3*plane4 - total_body).mat('water')
-		pmldom = ((cyl4-cyl3)*plane5*plane6 - (water + total_body)).mat('pml').maxh(60)
+		pmldom = ((cyl4-cyl3)*plane5*plane6 - (water + total_body)).mat('pml')
 
 		geo.Add(AuNP)
 		geo.Add(mt_endcaps)
