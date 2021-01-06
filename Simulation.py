@@ -55,7 +55,7 @@ class Simulation:
 
 		return CoefficientFunction([permittivities[mat] for mat in mesh.GetMaterials()])
 
-	def GetEsc(self, wavelength, mat=False):
+	def GetEsc(self, wavelength):
 
 		mesh = self.mesh
 		fes = self.fes
@@ -79,18 +79,13 @@ class Simulation:
 		f = LinearForm(fes)
 		f += (eps_r-n**2)*k**2*Einc*W*dx(p)
 
-		if mat:
-			a.Assemble()
-			f.Assemble()
-			return a, f
-		else:
-			c = Preconditioner(a, 'bddc', inverse="sparsecholesky")
-			a.Assemble()
-			f.Assemble()
-			Esc.vec.data = solvers.GMRes(
-				a.mat, f.vec, pre=c.mat, printrates=False, restart=750)
+		c = Preconditioner(a, 'bddc')
+		a.Assemble()
+		f.Assemble()
+		Esc.vec.data = solvers.GMRes(
+			a.mat, f.vec, pre=c.mat, printrates=False, restart=750)
 
-			return Esc
+		return Esc
 
 	def Error(self, wavelength):
 
@@ -105,7 +100,7 @@ class Simulation:
 			mesh.Materials('mt_end') + mesh.Materials('mt_sphere') + \
 			mesh.Materials('mt_cyl') + mesh.Materials('water')
 
-		err_func = Norm(grad(Esc)-grad(Esc_approx))
+		err_func = (grad(Esc)-grad(Esc_approx))*Conj(grad(Esc)-grad(Esc_approx))
 
 		# elerr = Integrate(err_func, mesh, element_wise=True)
 		elerr = Integrate(err_func, mesh, element_wise=True, definedon=p)
