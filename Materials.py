@@ -29,8 +29,8 @@ def Gold(wavelength):
 	real_permittivity = permittivity.real
 	imag_permittivity = permittivity.imag 
 	
-	real_fit = interp1d(wavelengths,real_permittivity,kind='quadratic')
-	imag_fit = interp1d(wavelengths,imag_permittivity,kind='quadratic')
+	real_fit = interp1d(wavelengths,real_permittivity)
+	imag_fit = interp1d(wavelengths,imag_permittivity)
 
 	return np.complex(real_fit(wavelength),imag_fit(wavelength))
 

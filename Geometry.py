@@ -1,11 +1,6 @@
 from ngsolve import Mesh, pml
 from netgen.csg import *
 
-from netgen.geom2d import unit_square
-
-from ngsolve import Draw
-
-
 #Rename nanoparticle variables if more materials are implemented 
 
 def Nanosphere(particle,mt_length, physical_space, domain, mt_model="radial"):
