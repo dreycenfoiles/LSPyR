@@ -95,25 +95,25 @@ class Simulation:
 	def Error(self, wavelength):
 
 		mesh = self.mesh
-		fes = self.fes
 		fesLO = self.fesLO
-
-		# p = mesh.Materials('gold') + mesh.Materials('mt_mid') + \
-		# 	mesh.Materials('mt_end') + mesh.Materials('water') + \
-		# 	mesh.Materials('mt_sphere') + mesh.Materials('mt_cyl')
 
 		Esc = self.GetEsc(wavelength)
 		Esc_approx = GridFunction(fesLO)
 		Esc_approx.Set(Esc)
 
-		err_func = Norm(Esc-Esc_approx)
-		# elerr_phy = Integrate(err_func, mesh, element_wise=True, definedon=p)
-		elerr = Integrate(err_func, mesh, element_wise=True)
+		p = mesh.Materials('gold') + mesh.Materials('mt_mid') + \
+			mesh.Materials('mt_end') + mesh.Materials('mt_sphere') + \
+			mesh.Materials('mt_cyl') + mesh.Materials('water')
+
+		err_func = Norm(grad(Esc)-grad(Esc_approx))
+
+		# elerr = Integrate(err_func, mesh, element_wise=True)
+		elerr = Integrate(err_func, mesh, element_wise=True, definedon=p)
 		maxerr = max(elerr)
 
 		return elerr, maxerr
 
-	def RefineMesh(self, fmin, fmax, tol=1000, percentage=.5):
+	def RefineMesh(self, fmin=4, fmax=7, tol=1e-2, percentage=.35):
 
 		fes = self.fes
 		fesLO = self.fesLO
@@ -125,11 +125,15 @@ class Simulation:
 		print("DoF: ", fes.ndof)
 		print("Max Error: ", maxerr)
 
+		p = mesh.Materials('gold') + mesh.Materials('mt_mid') + \
+			mesh.Materials('mt_end') + mesh.Materials('mt_sphere') + \
+			mesh.Materials('mt_cyl') + mesh.Materials('water')
+
 		if maxerr < tol:
 			return
 
 		else:
-			for el in mesh.Elements():
+			for el in mesh.Elements(p.VB()):
 				mesh.SetRefinementFlag(el, elerr[el.nr] > percentage*maxerr)
 
 			mesh.Refine()
@@ -143,12 +147,15 @@ class Simulation:
 			error2 = self.Error(fmid2)[1]
 
 			if error1 > error2:
-				self.RefineMesh(fmid1, fmid, tol=tol, percentage=percentage)
+				self.RefineMesh(fmin=fmid1, fmax=fmid, tol=tol, percentage=percentage)
 			else:
-				self.RefineMesh(fmid, fmid2, tol=tol, percentage=percentage)
+				self.RefineMesh(fmin=fmid, fmax=fmid2, tol=tol, percentage=percentage)
+
 
 	def Extinction(self, wavelength):
 		print("Wavelength: ", wavelength)
+
+		wavelength /= 100
 
 		mesh = self.mesh
 
@@ -163,7 +170,7 @@ class Simulation:
 			mesh.Materials('mt_end') + mesh.Materials('mt_sphere') + \
 			mesh.Materials('mt_cyl')
 
-		ext = 1e-18*k*Integrate((eps_r-1)*E*Conj(Einc), mesh, definedon=p).imag
+		ext = 1e-14*k*Integrate((eps_r-1)*E*Conj(Einc), mesh, definedon=p).imag
 		return -ext
 
 	def DrawField(self, E):
@@ -174,39 +181,3 @@ class Simulation:
 						filename="result",
 						subdivision=2)
 		vtk.Do()
-
-	# def ExtinctionSpectrum(self, InitWave, FinWave, Steps):
-
-	#     waverange = np.linspace(InitWave, FinWave, Steps)
-	#     extinction = np.array([Extinction(wavelength)
-	#                            for wavelength in waverange])
-
-	#     plt.figure()
-	#     plt.plot(waverange, extinction)
-	#     plt.show()
-
-	# def Saturation(self, aeff, ratio):
-
-	#     print("aeff: ", aeff)
-	#     print("ratio: ", ratio)
-
-	#     mt_length_list = np.linspace(0, 50, 11)
-	#     ext_list = []
-
-	#     for mt_length in mt_length_list:
-	#         print("length: ", mt_length)
-
-
-	#         maxerr_wavelength = RefineMesh()
-	#         # SSP = SolutionSpace(maxerr_wavelength-100,maxerr_wavelength+100)
-
-	#         res = minimize_scalar(Extinction, method="Bounded", bounds=(
-	#             400, 800))
-	#         print("Wavelength: ", res.x)
-
-	#         ext_list.append(res.x)
-
-	#     with open("Saturation_Data.csv", "a") as csvfile:
-	#         writer = csv.writer(csvfile)
-	#         writer.writerow([aeff, ratio, ext_list])
-	# 	return ext_list

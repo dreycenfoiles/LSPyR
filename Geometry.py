@@ -13,6 +13,11 @@ def Nanosphere(particle,mt_length, physical_space, domain, mt_model="radial"):
 	# physical_space = particle + mt_length + 150
 	# domain = physical_space + 200
 
+	particle /= 100
+	mt_length /= 100
+	physical_space /= 100
+	domain /= 100
+
 	geo = CSGeometry()
 	
 	if mt_length == 0:
@@ -27,7 +32,7 @@ def Nanosphere(particle,mt_length, physical_space, domain, mt_model="radial"):
 
 		geo.Add(AuNP)
 		geo.Add(water)
-		geo.Add(pmldom)
+		geo.Add(pmldom,maxh=1)
 
 	else:
 
@@ -50,13 +55,15 @@ def Nanosphere(particle,mt_length, physical_space, domain, mt_model="radial"):
 		
 		else: 
 
+			mt_radius = .125 # 12.5 nm
+
 			sphere1 = Sphere(Pnt(0,0,0),particle)
 			sphere2 = Sphere(Pnt(0,0,0),physical_space)
 			sphere3 = Sphere(Pnt(0,0,0),domain).bc('outer')
 
-			cyl1 = Cylinder(Pnt(0,0,0),Pnt(0,0,1),12.5)
-			cyl2 = Cylinder(Pnt(0,0,0),Pnt(0,1,0),12.5)
-			cyl3 = Cylinder(Pnt(0,0,0),Pnt(1,0,0),12.5)
+			cyl1 = Cylinder(Pnt(0,0,0),Pnt(0,0,1),mt_radius)
+			cyl2 = Cylinder(Pnt(0,0,0),Pnt(0,1,0),mt_radius)
+			cyl3 = Cylinder(Pnt(0,0,0),Pnt(1,0,0),mt_radius)
 
 			plane1 = Plane(Pnt(0,0,mt_length+particle),Vec(0,0,1))
 			plane2 = Plane(Pnt(0,0,-(mt_length+particle)),Vec(0,0,-1))
@@ -78,13 +85,13 @@ def Nanosphere(particle,mt_length, physical_space, domain, mt_model="radial"):
 			geo.Add(mt2)
 			geo.Add(mt3)
 			geo.Add(water)
-			geo.Add(pmldom)
+			geo.Add(pmldom,maxh=1)
 
-	ngmesh = geo.GenerateMesh()
+	ngmesh = geo.GenerateMesh(maxh=2.8)
 
 	mesh = Mesh(ngmesh)
 
-	p=pml.BrickRadial((-domain,-domain,-domain),(domain,domain,domain),alpha=1J)
+	p=pml.Radial(origin=(0,0,0),rad=domain)
 	mesh.SetPML(p,'pml')
 
 	return mesh, particle, particle
