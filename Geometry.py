@@ -27,7 +27,7 @@ def Nanosphere(particle,mt_length, physical_space, domain, mt_model="radial"):
 
 		geo.Add(AuNP)
 		geo.Add(water)
-		geo.Add(pmldom,maxh=1)
+		geo.Add(pmldom,maxh=.7)
 
 	else:
 
@@ -82,7 +82,7 @@ def Nanosphere(particle,mt_length, physical_space, domain, mt_model="radial"):
 			geo.Add(water)
 			geo.Add(pmldom,maxh=1)
 
-	ngmesh = geo.GenerateMesh(maxh=2.8)
+	ngmesh = geo.GenerateMesh(maxh=2)
 
 	mesh = Mesh(ngmesh)
 

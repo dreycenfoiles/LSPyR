@@ -79,7 +79,7 @@ class Simulation:
 		f = LinearForm(fes)
 		f += (eps_r-n**2)*k**2*Einc*W*dx(p)
 
-		c = Preconditioner(a, 'bddc')
+		c = Preconditioner(a, 'bddc', inverse='pardiso')
 		a.Assemble()
 		f.Assemble()
 		Esc.vec.data = solvers.GMRes(
@@ -100,7 +100,7 @@ class Simulation:
 			mesh.Materials('mt_end') + mesh.Materials('mt_sphere') + \
 			mesh.Materials('mt_cyl') + mesh.Materials('water')
 
-		err_func = (grad(Esc)-grad(Esc_approx))*Conj(grad(Esc)-grad(Esc_approx))
+		err_func = Norm(grad(Esc)-grad(Esc_approx))**2
 
 		# elerr = Integrate(err_func, mesh, element_wise=True)
 		elerr = Integrate(err_func, mesh, element_wise=True, definedon=p)
@@ -108,7 +108,7 @@ class Simulation:
 
 		return elerr, maxerr
 
-	def RefineMesh(self, fmin=4, fmax=7, tol=1e-2, percentage=.35):
+	def RefineMesh(self, fmin=4, fmax=7, tol=1e-1, percentage=.3, iteration=0):
 
 		fes = self.fes
 		fesLO = self.fesLO
@@ -124,7 +124,7 @@ class Simulation:
 			mesh.Materials('mt_end') + mesh.Materials('mt_sphere') + \
 			mesh.Materials('mt_cyl') + mesh.Materials('water')
 
-		if maxerr < tol:
+		if maxerr < tol or iteration > 5:
 			return
 
 		else:
@@ -142,9 +142,9 @@ class Simulation:
 			error2 = self.Error(fmid2)[1]
 
 			if error1 > error2:
-				self.RefineMesh(fmin=fmid1, fmax=fmid, tol=tol, percentage=percentage)
+				self.RefineMesh(fmin=fmid1, fmax=fmid, tol=tol, percentage=percentage, iteration=iteration+1)
 			else:
-				self.RefineMesh(fmin=fmid, fmax=fmid2, tol=tol, percentage=percentage)
+				self.RefineMesh(fmin=fmid, fmax=fmid2, tol=tol, percentage=percentage, iteration=iteration+1)
 
 
 	def Extinction(self, wavelength):
